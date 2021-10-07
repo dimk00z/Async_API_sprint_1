@@ -1,0 +1,103 @@
+version: '3'
+services:
+  postges_movie_db:
+    container_name: postges_movie_db
+    image: postgres:13.4
+    restart: always
+    expose: 
+      - "5432"
+    volumes: 
+      - ../postgres:/var/lib/postgresql/data
+    networks:
+      - movie_project_net
+    env_file:
+      - ./movies_admin/.env
+  
+  movies_elastic:
+    container_name: movies_elastic
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.1
+    environment:
+    - discovery.type=single-node
+    - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    restart: always
+    #порт отставлен для проверки индекса
+    ports:
+      - 9200:9200
+    expose:
+      - "9200"
+    networks:
+      - movie_project_net
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+  
+  movies_redis:
+    container_name: movies_redis
+    image: redis:alpine
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    networks:
+      - movie_project_net
+    
+  movies_admin:
+    container_name: movies_admin
+    build:
+      context: ./movies_admin
+      dockerfile: Dockerfile
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    restart: always
+    expose:
+      - "8000"
+    env_file: 
+      - ./movies_admin/.env
+    volumes:
+      - static_volume:/code/staticfiles
+    depends_on: 
+      - postges_movie_db
+    networks:
+      - movie_project_net
+
+  movies_nginx:
+    container_name: movies_nginx
+    build: 
+      context: ./nginx
+      dockerfile: Dockerfile
+    volumes:
+      - static_volume:/code/staticfiles
+    restart: always
+    ports:
+      - 80:80
+    depends_on:
+      - movies_admin
+    networks:
+      - movie_project_net
+
+  postgres_to_es:
+    container_name: postgres_to_es
+    build:
+      context: ./postgres_to_es
+      dockerfile: Dockerfile
+    command: python main.py
+    restart: always
+    env_file: 
+      - ./postgres_to_es/.env
+    volumes:
+      - static_volume:/code/staticfiles
+    depends_on: 
+      - movies_redis
+      - movies_elastic
+      - postges_movie_db
+    networks:
+      - movie_project_net
+
+volumes:
+  static_volume:
+  redis_data:
+  elasticsearch-data:
+    driver: local
+
+networks:
+  movie_project_net:
+    name: movie_project_net
+    driver: bridge
