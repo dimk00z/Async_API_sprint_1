@@ -11,7 +11,7 @@ services:
     networks:
       - movie_project_net
     env_file:
-      - ./movies_admin/.env
+      - .env
   
   movies_elastic:
     container_name: movies_elastic
@@ -19,6 +19,10 @@ services:
     environment:
     - discovery.type=single-node
     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    healthcheck:
+      test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 30s
     restart: always
     #порт отставлен для проверки индекса
     ports:
@@ -35,6 +39,8 @@ services:
     image: redis:alpine
     volumes:
       - redis_data:/data
+    ports:
+      - 6379:6379
     expose:
       - "6379"
     networks:
@@ -81,7 +87,7 @@ services:
     command: python main.py
     restart: always
     env_file: 
-      - ./postgres_to_es/.env
+      - .env
     volumes:
       - static_volume:/code/staticfiles
     depends_on: 
