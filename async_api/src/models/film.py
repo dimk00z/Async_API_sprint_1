@@ -1,10 +1,8 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 from .abstract_model import AbstractModel
 
-id = Union[str, str]
-name = Union[str, str]
-persons = Optional[List[Dict[id, name]]]
+persons = Optional[List[Dict[str, str]]]
 object_names = Optional[List[str]]
 
 
