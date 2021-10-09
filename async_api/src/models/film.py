@@ -7,6 +7,7 @@ object_names = Optional[List[str]]
 
 
 class Film(AbstractModel):
+    id: str
     title: str
     description: str
     imdb_rating: float = None
