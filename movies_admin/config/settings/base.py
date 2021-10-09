@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
-
+from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 
 load_dotenv()
 
-SECRET_KEY = os.environ.get("SECRET_KEY")
+SECRET_KEY = os.environ.get("SECRET_KEY", default=get_random_secret_key())
 
 INSTALLED_APPS = [
     "django.contrib.admin",
