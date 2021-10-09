@@ -1,6 +1,6 @@
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Set
+from datetime import datetime
+from dataclasses import field, dataclass
 
 
 @dataclass(frozen=True)

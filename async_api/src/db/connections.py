@@ -1,11 +1,10 @@
 import logging
 
-import aioredis
 import backoff
+import aioredis
 from core import config
+from db import redis, elastic
 from elasticsearch import AsyncElasticsearch
-
-from db import elastic, redis
 
 
 def backoff_hdlr(details):
@@ -16,14 +15,14 @@ def backoff_hdlr(details):
     )
 
 
-@backoff.on_exception(backoff.expo, (Exception, ), on_backoff=backoff_hdlr, max_tries=10)
+@backoff.on_exception(backoff.expo, (Exception,), on_backoff=backoff_hdlr, max_tries=10)
 async def init_redis_connection():
     redis.redis = await aioredis.create_redis_pool(
         (config.REDIS_HOST, config.REDIS_PORT), minsize=10, maxsize=20
     )
 
 
-@backoff.on_exception(backoff.expo, (Exception, ), on_backoff=backoff_hdlr, max_tries=10)
+@backoff.on_exception(backoff.expo, (Exception,), on_backoff=backoff_hdlr, max_tries=10)
 async def init_elasticsearch_connection():
     elastic.es = AsyncElasticsearch(hosts=[f"{config.ELASTIC_HOST}"])
     pong = await elastic.es.ping()

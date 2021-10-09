@@ -1,8 +1,8 @@
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from fastapi import Depends, APIRouter, HTTPException
 from services.film import FilmService, get_film_service
 
 router = APIRouter()
@@ -23,7 +23,9 @@ class Film(BaseModel):
 
 # Внедряем FilmService с помощью Depends(get_film_service)
 @router.get("/{film_id}", response_model=Film)
-async def film_details(film_id: str, film_service: FilmService = Depends(get_film_service)) -> Film:
+async def film_details(
+    film_id: str, film_service: FilmService = Depends(get_film_service)
+) -> Film:
     film = await film_service.get_by_id(film_id)
     if not film:
         # Если фильм не найден, отдаём 404 статус

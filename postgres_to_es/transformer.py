@@ -19,7 +19,8 @@ class Transformer:
             for persons in ("writers", "actors", "directors"):
                 if getattr(film_work, persons):
                     transformed_movie[persons] = [
-                        {"id": person.id, "name": person.full_name} for person in getattr(film_work, persons)
+                        {"id": person.id, "name": person.full_name}
+                        for person in getattr(film_work, persons)
                     ]
                     if persons != "directors":
                         transformed_movie[f"{persons}_names"] = [

@@ -2,10 +2,9 @@ import logging
 from typing import List
 
 import backoff
-from elasticsearch import ElasticsearchException, RequestError, helpers
-from elasticsearch.client import Elasticsearch as ES_client
-
 from connections import backoff_hdlr
+from elasticsearch.client import Elasticsearch as ES_client
+from elasticsearch import RequestError, ElasticsearchException, helpers
 
 
 class ESLoader:
@@ -26,7 +25,10 @@ class ESLoader:
                     "filter": {
                         "english_stop": {"type": "stop", "stopwords": "_english_"},
                         "english_stemmer": {"type": "stemmer", "language": "english"},
-                        "english_possessive_stemmer": {"type": "stemmer", "language": "possessive_english"},
+                        "english_possessive_stemmer": {
+                            "type": "stemmer",
+                            "language": "possessive_english",
+                        },
                         "russian_stop": {"type": "stop", "stopwords": "_russian_"},
                         "russian_stemmer": {"type": "stemmer", "language": "russian"},
                     },
@@ -51,7 +53,11 @@ class ESLoader:
                     "id": {"type": "keyword"},
                     "imdb_rating": {"type": "float"},
                     "genres": {"type": "keyword"},
-                    "title": {"type": "text", "analyzer": "ru_en", "fields": {"raw": {"type": "keyword"}}},
+                    "title": {
+                        "type": "text",
+                        "analyzer": "ru_en",
+                        "fields": {"raw": {"type": "keyword"}},
+                    },
                     "description": {"type": "text", "analyzer": "ru_en"},
                     "actors_names": {"type": "text", "analyzer": "ru_en"},
                     "writers_names": {"type": "text", "analyzer": "ru_en"},
@@ -85,7 +91,9 @@ class ESLoader:
         try:
             check_index: bool = self.es.indices.exists(self.index_name)
             if not check_index:
-                create_result: dict = self.es.indices.create(index=self.index_name, ignore=400, body=settings)
+                create_result: dict = self.es.indices.create(
+                    index=self.index_name, ignore=400, body=settings
+                )
                 if "error" in create_result:
                     raise RequestError
                 logging.info(create_result)
@@ -98,7 +106,9 @@ class ESLoader:
             self.created_index = index_exist
             return self.created_index
 
-    @backoff.on_exception(backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr)
+    @backoff.on_exception(
+        backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr
+    )
     def bulk_index(self, transformed_data: List[dict], last_state: str) -> None:
         # согласен с замечанием, убрал try..except
         if last_state:
@@ -117,5 +127,9 @@ class ESLoader:
             )
 
         helpers.bulk(
-            self.es, actions=transformed_data, index=self.index_name, refresh=True, raise_on_error=True
+            self.es,
+            actions=transformed_data,
+            index=self.index_name,
+            refresh=True,
+            raise_on_error=True,
         )

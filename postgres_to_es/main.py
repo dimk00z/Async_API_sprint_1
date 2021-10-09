@@ -1,21 +1,20 @@
 import logging
-from datetime import datetime
 from os import environ
 from time import sleep
 from typing import List
+from datetime import datetime
 
-import elasticsearch
 import psycopg2
-from dotenv import load_dotenv
+import elasticsearch
 from redis import Redis
-
-from connections import connect_to_elastic, connect_to_postges, connect_to_redis
-from correct_terminate import TerminateProtected
-from extractor import PostgresExtractor
 from loader import ESLoader
-from setting_loaders import load_etl_settings
-from state import RedisStorage, State
+from dotenv import load_dotenv
 from transformer import Transformer
+from state import State, RedisStorage
+from extractor import PostgresExtractor
+from setting_loaders import load_etl_settings
+from correct_terminate import TerminateProtected
+from connections import connect_to_redis, connect_to_elastic, connect_to_postges
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -72,7 +71,9 @@ def main():
     if environ.get("ES_SHOULD_DROP_INDEX") == "TRUE":
         create_es_index(elastic_settings)
         redis_adapter.flushdb(redis_db)
-    pg_conn: psycopg2.extensions.connection = connect_to_postges(postgres_settings.dict())
+    pg_conn: psycopg2.extensions.connection = connect_to_postges(
+        postgres_settings.dict()
+    )
     state = State(storage=RedisStorage(redis_adapter=redis_adapter, redis_db=redis_db))
     es: elasticsearch.client.Elasticsearch = connect_to_elastic(elastic_settings.host)
     es_loader = ESLoader(es)
