@@ -10,3 +10,7 @@ stop:
 restart:
 	docker-compose down
 	docker-compose up -d
+
+format:
+	black .
+	isort .
