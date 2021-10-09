@@ -3,7 +3,7 @@ import logging
 import aioredis
 import backoff
 from core import config
-from elasticsearch import AsyncElasticsearch, exceptions
+from elasticsearch import AsyncElasticsearch
 
 from db import elastic, redis
 
@@ -16,16 +16,19 @@ def backoff_hdlr(details):
     )
 
 
-@backoff.on_exception(backoff.expo, (ConnectionRefusedError), on_backoff=backoff_hdlr, max_tries=10)
+@backoff.on_exception(backoff.expo, (Exception, ), on_backoff=backoff_hdlr, max_tries=10)
 async def init_redis_connection():
     redis.redis = await aioredis.create_redis_pool(
         (config.REDIS_HOST, config.REDIS_PORT), minsize=10, maxsize=20
     )
 
 
-@backoff.on_exception(backoff.expo, (exceptions.ConnectionError), on_backoff=backoff_hdlr, max_tries=10)
+@backoff.on_exception(backoff.expo, (Exception, ), on_backoff=backoff_hdlr, max_tries=10)
 async def init_elasticsearch_connection():
     elastic.es = AsyncElasticsearch(hosts=[f"{config.ELASTIC_HOST}"])
+    pong = await elastic.es.ping()
+    if not pong:
+        raise ConnectionError("Error connecting to Elastic!")
 
 
 async def init_connectons():
@@ -34,5 +37,6 @@ async def init_connectons():
 
 
 async def close_connections():
-    await redis.redis.close()
+    redis.redis.close()
+    await redis.redis.wait_closed()
     await elastic.es.close()
