@@ -10,8 +10,6 @@ def orjson_dumps(v, *, default):
 
 
 class AbstractModel(BaseModel):
-    id: str
-
     class Config:
         # Заменяем стандартную работу с json на более быструю
         json_loads = orjson.loads

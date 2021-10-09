@@ -1,14 +1,14 @@
-from functools import lru_cache
 from typing import Optional
+from functools import lru_cache
 
 from aioredis import Redis
-from db.elastic import get_elastic
+from fastapi import Depends
 from db.redis import get_redis
+from models.genre import Genre
+from db.elastic import get_elastic
 from elasticsearch import AsyncElasticsearch
 from elasticsearch._async.client import logger
 from elasticsearch.exceptions import NotFoundError
-from fastapi import Depends
-from models.genre import Genre
 
 GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 # TODO пока только заглушка
@@ -57,7 +57,9 @@ class GenreService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(genre.id, genre.json(), expire=genre_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(
+            genre.id, genre.json(), expire=genre_CACHE_EXPIRE_IN_SECONDS
+        )
 
 
 @lru_cache()

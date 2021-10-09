@@ -1,16 +1,15 @@
 import logging
 
 import uvicorn
+from core import config
+from db import connections
 from fastapi import FastAPI
+from api.v1 import film, person
+from core.logger import LOGGING
 from fastapi.responses import ORJSONResponse
 
-from api.v1 import film
-
 # from api.v1 import genre
-# from api.v1 import person
-from core import config
-from core.logger import LOGGING
-from db import connections
+
 
 app = FastAPI(
     title=config.PROJECT_NAME,
@@ -33,14 +32,16 @@ async def shutdown():
 # Подключаем роутер к серверу, указав префикс /v1/film
 # Теги указываем для удобства навигации по документации
 app.include_router(film.router, prefix="/api/v1/film", tags=["film"])
+app.include_router(person.router, prefix="/api/v1/person", tags=["person"])
 
 # TODO ниже пока нереализоанные роутеры
 # app.include_router(genre.router, prefix="/api/v1/genre", tags=["genre"])
-# app.include_router(person.router, prefix="/api/v1/person", tags=["genre"])
 
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
+        log_config=LOGGING,
+        log_level=logging.DEBUG,
     )

@@ -3,9 +3,8 @@ from typing import List
 
 import backoff
 import psycopg2
-
+from models import Person, FilmWork
 from connections import backoff_hdlr
-from models import FilmWork, Person
 
 
 class PostgresExtractor:
@@ -44,11 +43,17 @@ class PostgresExtractor:
             if row[persons]:
                 for person in row[persons]:
                     getattr(film_work, persons).add(
-                        Person(id=person["id"], full_name=person["name"], role=persons[:-1])
+                        Person(
+                            id=person["id"], full_name=person["name"], role=persons[:-1]
+                        )
                     )
         return film_work
 
-    @backoff.on_exception(backoff.expo, (psycopg2.Error, psycopg2.OperationalError), on_backoff=backoff_hdlr)
+    @backoff.on_exception(
+        backoff.expo,
+        (psycopg2.Error, psycopg2.OperationalError),
+        on_backoff=backoff_hdlr,
+    )
     def extract_data(self) -> List[FilmWork]:
         movies_id_query: str = " ".join(
             [
@@ -85,7 +90,9 @@ class PostgresExtractor:
             movies_id_cursor.execute(movies_id_query)
             while data := movies_id_cursor.fetchmany(self.cursor_limit):
                 movies: List[FilmWork] = []
-                with self.pg_conn.cursor(name="movies_extented_data_cursor") as movies_extented_data_cursor:
+                with self.pg_conn.cursor(
+                    name="movies_extented_data_cursor"
+                ) as movies_extented_data_cursor:
 
                     movies_extented_data_query = movies_info_query.format(
                         ",".join((f"'{id}'" for id, _ in data))
