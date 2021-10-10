@@ -14,7 +14,10 @@ class MoviesTransformer(BaseTransformer):
                 "imdb_rating": film_work.rating,
                 "title": film_work.title,
                 "description": film_work.description,
-                "genres": [{"uuid": genre.uuid, "name": genre.name} for genre in film_work.genres],
+                "genres": [
+                    {"uuid": genre.uuid, "name": genre.name}
+                    for genre in film_work.genres
+                ],
             }
 
             for persons in ("writers", "actors", "directors"):

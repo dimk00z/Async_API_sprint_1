@@ -41,8 +41,12 @@ class ESLoader:
         for index_name in self.indexes:
             self.create_index(index_name=index_name)
 
-    @backoff.on_exception(backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr)
-    def bulk_index(self, transformed_data: List[dict], index_name: str, last_state: str) -> None:
+    @backoff.on_exception(
+        backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr
+    )
+    def bulk_index(
+        self, transformed_data: List[dict], index_name: str, last_state: str
+    ) -> None:
         if last_state:
             remove_actions = [
                 {
