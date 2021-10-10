@@ -15,6 +15,7 @@ class Person:
 class Genre:
     uuid: UUID
     name: str
+    updated_at: datetime = None
 
 
 @dataclass
