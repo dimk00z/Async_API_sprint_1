@@ -62,7 +62,7 @@ INDEXES = {
                     "dynamic": "strict",
                     "properties": {
                         "uuid": {"type": "keyword"},
-                        "name": {"type": "text", "analyzer": "ru_en"},
+                        "full_name": {"type": "text", "analyzer": "ru_en"},
                     },
                 },
                 "writers": {
