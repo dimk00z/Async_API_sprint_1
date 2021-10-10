@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import Dict, List
 
 import backoff
 import psycopg2
@@ -7,7 +7,7 @@ from connections import backoff_hdlr
 from models import Genre, Person, FilmWork
 
 
-class PostgresExtractor:
+class MoviesPostgresExtractor:
     def __init__(
         self,
         pg_conn: psycopg2.extensions.connection,
