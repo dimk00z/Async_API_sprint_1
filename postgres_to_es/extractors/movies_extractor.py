@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import List
 
 import backoff
 import psycopg2
