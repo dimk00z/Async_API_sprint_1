@@ -1,0 +1,4 @@
+from base_extractor import BaseExtractor
+from genres_extractor import GenresPostgresExtractor
+from movies_extractor import MoviesPostgresExtractor
+from persons_extractor import PersonsPostgresExtractor
