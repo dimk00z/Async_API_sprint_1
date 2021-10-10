@@ -12,30 +12,36 @@ class ESLoader:
     def __init__(self, es: ES_client, index_name: str = "movies") -> None:
         self.es = es
         self.index_name = index_name
+        self.indexes = INDEXES
 
-    def drop_index(self):
-        self.es.indices.delete(index=self.index_name, ignore=[400, 404])
+    def drop_indexes(self):
+        for index_name in self.indexes:
+            self.es.indices.delete(index=index_name, ignore=[400, 404])
 
-    def create_index(self) -> bool:
+    def create_index(self, index_name: str) -> bool:
 
         index_exist: bool = False
         try:
-            check_index: bool = self.es.indices.exists(self.index_name)
+            check_index: bool = self.es.indices.exists(index_name)
             if not check_index:
                 create_result: dict = self.es.indices.create(
-                    index=self.index_name, ignore=400, body=INDEXES[self.index_name]
+                    index=index_name, ignore=400, body=self.indexes[index_name]
                 )
                 if "error" in create_result:
                     raise RequestError
                 logging.info(create_result)
             else:
-                logging.info("Elasticsearch index %s already exists", self.index_name)
+                logging.info("Elasticsearch index %s already exists", index_name)
             index_exist = True
         except RequestError:
             logging.error(create_result["error"])
         finally:
             self.created_index = index_exist
             return self.created_index
+
+    def create_indexes(self):
+        for index_name in self.indexes:
+            self.create_index(index_name=index_name)
 
     @backoff.on_exception(backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr)
     def bulk_index(self, transformed_data: List[dict], last_state: str) -> None:
