@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import Set
-from datetime import datetime
+from datetime import date, datetime
 from dataclasses import field, dataclass
 
 
@@ -8,7 +8,9 @@ from dataclasses import field, dataclass
 class Person:
     uuid: UUID
     full_name: str
-    role: str
+    role: str = None
+    birth_date: date = None
+    updated_at: datetime = None
 
 
 @dataclass(frozen=True)
