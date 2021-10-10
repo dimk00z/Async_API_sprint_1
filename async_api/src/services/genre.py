@@ -22,17 +22,17 @@ class GenreService:
         self.redis = redis
         self.elastic = elastic
 
-    # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
+    # get_by_id возвращает объект жанра. Он опционален, так как жанр может отсутствовать в базе
     async def get_by_id(self, genre_id: str) -> Optional[Genre]:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         genre = await self._genre_from_cache(genre_id)
         if not genre:
-            # Если фильма нет в кеше, то ищем его в Elasticsearch
+            # Если жанра нет в кеше, то ищем его в Elasticsearch
             genre = await self._get_genre_from_elastic(genre_id)
             if not genre:
-                # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
+                # Если он отсутствует в Elasticsearch, значит, жанра вообще нет в базе
                 return None
-            # Сохраняем фильм  в кеш
+            # Сохраняем жанр  в кеш
             await self._put_genre_to_cache(genre)
 
         return genre
@@ -45,23 +45,23 @@ class GenreService:
             logger.error(not_found_exception)
 
     async def _genre_from_cache(self, genre_id: str) -> Optional[Genre]:
-        # Пытаемся получить данные о фильме из кеша, используя команду get
+        # Пытаемся получить данные о жанре из кеша, используя команду get
         # https://redis.io/commands/get
         data = await self.redis.get(genre_id)
         if not data:
             return None
 
         # pydantic предоставляет удобное API для создания объекта моделей из json
-        genre = genre.parse_raw(data)
+        genre = Genre.parse_raw(data)
         return genre
 
     async def _put_genre_to_cache(self, genre: Genre):
-        # Сохраняем данные о фильме, используя команду set
+        # Сохраняем данные о жанре, используя команду set
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
         await self.redis.set(
-            genre.id, genre.json(), expire=GENRE_CACHE_EXPIRE_IN_SECONDS
+            genre.uuid, genre.json(), expire=GENRE_CACHE_EXPIRE_IN_SECONDS
         )
 
 
