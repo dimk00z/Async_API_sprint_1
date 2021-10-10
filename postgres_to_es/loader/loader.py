@@ -2,17 +2,15 @@ import logging
 from typing import List
 
 import backoff
-from loader.indexes import INDEXES
 from connections import backoff_hdlr
 from elasticsearch.client import Elasticsearch as ES_client
 from elasticsearch import RequestError, ElasticsearchException, helpers
 
 
 class ESLoader:
-    def __init__(self, es: ES_client, index_name: str = "movies") -> None:
+    def __init__(self, es: ES_client, indexes) -> None:
         self.es = es
-        self.index_name = index_name
-        self.indexes = INDEXES
+        self.indexes = indexes
 
     def drop_indexes(self):
         for index_name in self.indexes:
@@ -45,7 +43,6 @@ class ESLoader:
 
     @backoff.on_exception(backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr)
     def bulk_index(self, transformed_data: List[dict], last_state: str) -> None:
-        # согласен с замечанием, убрал try..except
         if last_state:
             remove_actions = [
                 {
