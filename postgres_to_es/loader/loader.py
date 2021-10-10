@@ -42,26 +42,26 @@ class ESLoader:
             self.create_index(index_name=index_name)
 
     @backoff.on_exception(backoff.expo, (ElasticsearchException), on_backoff=backoff_hdlr)
-    def bulk_index(self, transformed_data: List[dict], last_state: str) -> None:
+    def bulk_index(self, transformed_data: List[dict], index_name: str, last_state: str) -> None:
         if last_state:
             remove_actions = [
                 {
-                    "_id": transformed_film["_id"],
+                    "_id": transformed_value["_id"],
                     "_op_type": "delete",
                 }
-                for transformed_film in transformed_data
+                for transformed_value in transformed_data
             ]
             helpers.bulk(
                 self.es,
                 actions=remove_actions,
-                index=self.index_name,
+                index=index_name,
                 raise_on_error=False,
             )
 
         helpers.bulk(
             self.es,
             actions=transformed_data,
-            index=self.index_name,
+            index=index_name,
             refresh=True,
             raise_on_error=True,
         )
