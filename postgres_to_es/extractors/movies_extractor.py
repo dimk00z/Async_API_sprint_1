@@ -5,19 +5,10 @@ import backoff
 import psycopg2
 from connections import backoff_hdlr
 from models import Genre, Person, FilmWork
+from extractors.base_extractor import BaseExtractor
 
 
-class MoviesPostgresExtractor:
-    def __init__(
-        self,
-        pg_conn: psycopg2.extensions.connection,
-        last_state: str = "",
-        cursor_limit: int = 200,
-    ) -> None:
-        self.pg_conn = pg_conn
-        self.last_state: str = last_state
-        self.cursor_limit = cursor_limit
-
+class MoviesPostgresExtractor(BaseExtractor):
     def fetch_persons(self, row: psycopg2.extras.DictRow, movie: FilmWork):
         try:
             roles_dict_name = f'{row["role"]}s'
@@ -58,7 +49,7 @@ class MoviesPostgresExtractor:
         (psycopg2.Error, psycopg2.OperationalError),
         on_backoff=backoff_hdlr,
     )
-    def extract_movies(self) -> List[FilmWork]:
+    def extract_data(self) -> List[FilmWork]:
         movies_id_query: str = " ".join(
             [
                 "SELECT id, updated_at",

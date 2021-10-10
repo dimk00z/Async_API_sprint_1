@@ -5,19 +5,10 @@ import backoff
 import psycopg2
 from models import Genre
 from connections import backoff_hdlr
+from extractors.base_extractor import BaseExtractor
 
 
-class GenresPostgresExtractor:
-    def __init__(
-        self,
-        pg_conn: psycopg2.extensions.connection,
-        last_state: str = "",
-        cursor_limit: int = 200,
-    ) -> None:
-        self.pg_conn = pg_conn
-        self.last_state: str = last_state
-        self.cursor_limit = cursor_limit
-
+class GenresPostgresExtractor(BaseExtractor):
     def fetch_genre_row(self, row: psycopg2.extras.DictRow) -> Genre:
         genre = Genre(uuid=row["uuid"], name=row["name"], updated_at=row["updated_at"])
         return genre
@@ -27,7 +18,7 @@ class GenresPostgresExtractor:
         (psycopg2.Error, psycopg2.OperationalError),
         on_backoff=backoff_hdlr,
     )
-    def extract_genres(self) -> List[Genre]:
+    def extract_data(self) -> List[Genre]:
         genres_query: str = " ".join(
             [
                 "SELECT id as uuid, updated_at, name",
