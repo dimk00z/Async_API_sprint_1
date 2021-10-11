@@ -8,7 +8,8 @@ from .abstract_model import AbstractModel
 
 class PersonForFilm(BaseModel):
     uuid: str
-    full_name:str
+    full_name: str
+
 
 class Film(AbstractModel):
     uuid: str

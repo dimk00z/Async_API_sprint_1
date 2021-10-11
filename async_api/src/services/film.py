@@ -1,5 +1,5 @@
-from typing import Optional
 from functools import lru_cache
+from typing import Dict, List, Optional
 
 from aioredis import Redis
 from fastapi import Depends
@@ -56,7 +56,62 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(
+            film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS
+        )
+
+    async def get_all_films(
+        self,
+        sort: Optional[str],
+        filter_genre: Optional[str],
+        page_number: int,
+        page_size: int,
+    ) -> List[Dict]:
+        # Пытаемся получить данные из кеша, потому что оно работает быстрее
+        # genre = await self._genre_from_cache(genre_uuid)
+        # if not genre:
+        # Если жанра нет в кеше, то ищем его в Elasticsearch
+        films = await self._get_films_from_elastic(
+            sort=sort,
+            filter_genre=filter_genre,
+            page_number=page_number,
+            page_size=page_size,
+        )
+        # if not genre:
+        # Если он отсутствует в Elasticsearch, значит, жанра вообще нет в базе
+        #     return None
+        # Сохраняем жанр  в кеш
+        # await self._put_genre_to_cache(genre)
+
+        return films
+
+    async def _get_films_from_elastic(
+        self,
+        sort: Optional[str],
+        filter_genre: Optional[str],
+        page_number: int,
+        page_size: int,
+    ) -> List[dict]:
+        try:
+            films = []
+            search_results = await self.elastic.search(
+                index="movies",
+                body={"query": {"match_all": {}}},
+                filter_path=["hits.hits._id", "hits.hits._source"],
+                size=20,
+            )
+            for res in search_results["hits"]["hits"]:
+                films.append(
+                    {
+                        "uuid": res["_id"],
+                        "title": res["_source"]["title"],
+                        "imdb_rating": res["_source"]["imdb_rating"],
+                    }
+                )
+            return films
+
+        except NotFoundError as not_found_exception:
+            logger.error(not_found_exception)
 
 
 @lru_cache()
