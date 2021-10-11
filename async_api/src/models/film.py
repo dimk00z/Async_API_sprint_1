@@ -1,11 +1,14 @@
 from typing import Dict, List, Optional
 
+from pydantic import BaseModel
+
 from .genre import Genre
 from .abstract_model import AbstractModel
 
-persons = Optional[List[Dict[str, str]]]
-object_names = Optional[List[str]]
 
+class PersonForFilm(BaseModel):
+    uuid: str
+    full_name:str
 
 class Film(AbstractModel):
     uuid: str
@@ -13,6 +16,6 @@ class Film(AbstractModel):
     description: str
     imdb_rating: float = None
     genres: List[Genre] = None
-    writers: persons = None
-    actors: persons = None
-    directors: persons = None
+    writers: List[PersonForFilm] = None
+    actors: List[PersonForFilm] = None
+    directors: List[PersonForFilm] = None

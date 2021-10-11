@@ -3,9 +3,9 @@ from functools import lru_cache
 
 from aioredis import Redis
 from fastapi import Depends
-from models.film import Film
 from db.redis import get_redis
 from db.elastic import get_elastic
+from models.film import Film, PersonForFilm
 from elasticsearch import AsyncElasticsearch
 from elasticsearch._async.client import logger
 from elasticsearch.exceptions import NotFoundError
@@ -56,7 +56,7 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(film.id, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
 
 
 @lru_cache()

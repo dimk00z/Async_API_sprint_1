@@ -5,20 +5,24 @@ from pydantic import BaseModel
 from fastapi import Depends, APIRouter, HTTPException
 from services.film import FilmService, get_film_service
 
+from .genre import Genre
+
 router = APIRouter()
 
 persons = Optional[List[Dict[str, str]]]
 
-
+class PersonForFilm(BaseModel):
+    uuid: str
+    full_name:str
 class Film(BaseModel):
     id: str
     title: str
     description: str
     imdb_rating: float = None
-    genres: Optional[List[str]] = None
-    writers: persons = None
-    actors: persons = None
-    directors: persons = None
+    genres: List[Genre] = None
+    writers: List[PersonForFilm] = None
+    actors: List[PersonForFilm] = None
+    directors: List[PersonForFilm] = None
 
 
 # Внедряем FilmService с помощью Depends(get_film_service)
@@ -28,19 +32,10 @@ async def film_details(
 ) -> Film:
     film = await film_service.get_by_id(film_id)
     if not film:
-        # Если фильм не найден, отдаём 404 статус
-        # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum
-        # Такой код будет более поддерживаемым
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="film not found")
 
-    # Перекладываем данные из models.Film в Film
-    # Обратите внимание, что у модели бизнес-логики есть поле description
-    # Которое отсутствует в модели ответа API.
-    # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
-    # вы бы предоставляли клиентам данные, которые им не нужны
-    # и, возможно, данные, которые опасно возвращать
     return Film(
-        id=film.id,
+        id=film.uuid,
         title=film.title,
         description=film.description,
         imdb_rating=film.imdb_rating,
