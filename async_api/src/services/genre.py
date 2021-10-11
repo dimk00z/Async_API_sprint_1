@@ -1,15 +1,14 @@
 from functools import lru_cache
-from typing import Optional, List
+from typing import List, Optional
 
 from aioredis import Redis
+from fastapi import Depends
+from db.redis import get_redis
+from models.genre import Genre
+from db.elastic import get_elastic
 from elasticsearch import AsyncElasticsearch
 from elasticsearch._async.client import logger
 from elasticsearch.exceptions import NotFoundError
-from fastapi import Depends
-
-from db.elastic import get_elastic
-from db.redis import get_redis
-from models.genre import Genre
 
 GENRE_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
@@ -22,7 +21,9 @@ class GenreService:
         self.redis = redis
         self.elastic = elastic
 
-    async def get_all_genres(self, ) -> List[Genre]:
+    async def get_all_genres(
+        self,
+    ) -> List[Genre]:
         # Пытаемся получить данные из кеша, потому что оно работает быстрее
         # genre = await self._genre_from_cache(genre_uuid)
         # if not genre:
@@ -53,16 +54,22 @@ class GenreService:
 
     async def _get_genre_from_elastic(self, genre_uuid: str) -> Optional[Genre]:
         try:
-            doc = await self.elastic.get("genre", genre_uuid)
+            doc = await self.elastic.get("genres", genre_uuid)
             return Genre(id=doc["_id"], **doc["_source"])
         except NotFoundError as not_found_exception:
             logger.error(not_found_exception)
 
-    async def _get_genres_from_elastic(self, ) -> List[Genre]:
+    async def _get_genres_from_elastic(
+        self,
+    ) -> List[Genre]:
         try:
             genres_list = []
-            search_results = await self.elastic.search(index="genre", body={"query": {"match_all": {}}},
-                                                       filter_path=['hits.hits._id', 'hits.hits._source'], size=20, )
+            search_results = await self.elastic.search(
+                index="genres",
+                body={"query": {"match_all": {}}},
+                filter_path=["hits.hits._id", "hits.hits._source"],
+                size=20,
+            )
             for res in search_results["hits"]["hits"]:
                 genres_list.append(Genre(uuid=res["_id"], name=res["_source"]["name"]))
             return genres_list
@@ -93,7 +100,7 @@ class GenreService:
 
 @lru_cache()
 def get_genre_service(
-        redis: Redis = Depends(get_redis),
-        elastic: AsyncElasticsearch = Depends(get_elastic),
+    redis: Redis = Depends(get_redis),
+    elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> GenreService:
     return GenreService(redis, elastic)

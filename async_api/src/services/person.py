@@ -29,7 +29,7 @@ class PersonService:
         return person
 
     async def _get_person_from_elastic(self, person_uuid: UUID) -> Optional[Person]:
-        doc = await self.elastic.get("person", str(person_uuid))
+        doc = await self.elastic.get("persons", str(person_uuid))
         return Person(uuid=doc["_id"], **doc["_source"])
 
     async def _person_from_cache(self, person_uuid: UUID) -> Optional[Person]:

@@ -1,5 +1,6 @@
 from enum import Enum
 from uuid import UUID
+from typing import List
 from http import HTTPStatus
 
 from pydantic import BaseModel
@@ -22,7 +23,7 @@ class Person(BaseModel):
     uuid: UUID
     full_name: str
     role: PersonRole
-    film_ids: list[UUID]
+    film_ids: List[UUID]
 
 
 @router.get("/{person_uuid}", response_model=Person)
