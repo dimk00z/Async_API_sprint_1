@@ -57,7 +57,9 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
+        await self.redis.set(
+            film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS
+        )
 
     async def get_all_films(
         self,
@@ -66,22 +68,13 @@ class FilmService:
         page_number: int,
         page_size: int,
     ) -> List[Dict]:
-        # Пытаемся получить данные из кеша, потому что оно работает быстрее
-        # genre = await self._genre_from_cache(genre_uuid)
-        # if not genre:
-        # Если жанра нет в кеше, то ищем его в Elasticsearch
+
         films = await self._get_films_from_elastic(
             sort=sort,
             filter_genre=filter_genre,
             page_number=page_number,
             page_size=page_size,
         )
-        # if not genre:
-        # Если он отсутствует в Elasticsearch, значит, жанра вообще нет в базе
-        #     return None
-        # Сохраняем жанр  в кеш
-        # await self._put_genre_to_cache(genre)
-
         return films
 
     async def _get_films_from_elastic(
@@ -97,35 +90,32 @@ class FilmService:
                 imdb_sorting = "asc"
             first_field = 0 if page_number in (0, 1) else page_number * page_size
             films = []
-            print("111111111111111111111111111111111")
-            print(filter_genre)
+
+            body = {"query": {"match_all": {}}}
+            if filter_genre:
+                body = {
+                    "query": {
+                        "nested": {
+                            "path": "genres",
+                            "query": {
+                                "bool": {
+                                    "must": [{"match": {f"genres.uuid": filter_genre}}]
+                                }
+                            },
+                        }
+                    }
+                }
+
             search_results = await self.elastic.search(
                 index="movies",
-                body={"query": {"match_all": {}}},
-                # body={
-                #     "query": {
-                #         "nested": {
-                #             "path": "genres",
-                #             "query": {
-                #                 "bool": {"must": [{"match": {f"genres.uuid": filter_genre}}]}
-                #             },
-                #         }
-                #     }
-                # },
+                body=body,
                 filter_path=["hits.hits._id", "hits.hits._source"],
                 size=page_size,
                 from_=first_field,
                 sort=f"imdb_rating:{imdb_sorting},",
             )
-            print(search_results)
             for res in search_results["hits"]["hits"]:
-                films.append(
-                    {
-                        "uuid": res["_id"],
-                        "title": res["_source"]["title"],
-                        "imdb_rating": res["_source"]["imdb_rating"],
-                    }
-                )
+                films.append(Film(**res["_source"]))
             return films
 
         except (NotFoundError, KeyError) as not_found_exception:

@@ -51,7 +51,14 @@ async def films_list(
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="not one film found"
         )
-    return films
+    return [
+        {
+            "uuid": film.uuid,
+            "title": film.title,
+            "imdb_rating": film.imdb_rating,
+        }
+        for film in films
+    ]
 
 
 # Внедряем FilmService с помощью Depends(get_film_service)

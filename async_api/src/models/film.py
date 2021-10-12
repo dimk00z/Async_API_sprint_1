@@ -14,7 +14,7 @@ class PersonForFilm(BaseModel):
 class Film(AbstractModel):
     uuid: str
     title: str
-    description: str
+    description: str = None
     imdb_rating: float = None
     genres: List[Genre] = None
     writers: List[PersonForFilm] = None
