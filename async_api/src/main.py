@@ -34,7 +34,7 @@ async def shutdown():
 # Теги указываем для удобства навигации по документации
 app.include_router(film.router, prefix="/api/v1/film", tags=["film"])
 app.include_router(person.router, prefix="/api/v1/person", tags=["person"])
-app.include_router(genre.router, prefix="/api/v1/genres", tags=["genre"])
+app.include_router(genre.router, prefix="/api/v1/genre", tags=["genre"])
 
 if __name__ == "__main__":
     uvicorn.run(
