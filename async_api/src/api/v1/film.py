@@ -1,51 +1,105 @@
+import logging
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel
-from fastapi import Depends, APIRouter, HTTPException
 from services.film import FilmService, get_film_service
+from fastapi import Query, Depends, APIRouter, HTTPException
+
+from .genre import Genre
 
 router = APIRouter()
 
 persons = Optional[List[Dict[str, str]]]
 
 
+class PersonForFilm(BaseModel):
+    uuid: str
+    full_name: str
+
+
 class Film(BaseModel):
-    id: str
+    uuid: str
     title: str
-    description: str
+    description: str = None
     imdb_rating: float = None
-    genres: Optional[List[str]] = None
-    writers: persons = None
-    actors: persons = None
-    directors: persons = None
+    genres: List[Genre] = None
+    writers: List[PersonForFilm] = None
+    actors: List[PersonForFilm] = None
+    directors: List[PersonForFilm] = None
+
+
+async def get_films(
+    film_service: FilmService = Depends(get_film_service),
+    filter_genre: Optional[str] = "",
+    sort: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$"),
+    page_number: int = 1,
+    page_size: int = 50,
+    query: Optional[str] = "",
+):
+    films = await film_service.get_films(
+        sort=sort,
+        filter_genre=filter_genre if filter_genre is not Query(None) else "",
+        page_number=page_number,
+        page_size=page_size,
+        query=str(query),
+    )
+    if "error" in films:
+        return HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=films["error"])
+    if not films:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="not one film found"
+        )
+    return [
+        {
+            "uuid": film.uuid,
+            "title": film.title,
+            "imdb_rating": film.imdb_rating,
+        }
+        for film in films
+    ]
+
+
+@router.get("/")
+async def films_list(
+    film_service: FilmService = Depends(get_film_service),
+    filter_genre: Optional[str] = Query(None, alias="filter[genre]"),
+    sort: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$"),
+    page_number: int = Query(1, alias="page[number]"),
+    page_size: int = Query(50, alias="page[size]"),
+) -> List[Dict]:
+    return await get_films(
+        film_service,
+        sort=sort,
+        filter_genre=filter_genre,
+        page_number=page_number,
+        page_size=page_size,
+    )
+
+
+@router.get("/search")
+async def films_search(
+    film_service: FilmService = Depends(get_film_service),
+    sort_: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$", alias="page[size]"),
+    page_number_: int = Query(1, alias="page[number]"),
+    page_size_: int = Query(50, alias="page[size]"),
+    query_: Optional[str] = Query(None, title="Поисковая строка", alias="query"),
+) -> List[Dict]:
+    return await get_films(
+        film_service,
+        sort=sort_,
+        query=query_,
+        page_number=page_number_,
+        page_size=page_size_,
+    )
 
 
 # Внедряем FilmService с помощью Depends(get_film_service)
-@router.get("/{film_id}", response_model=Film)
+@router.get("/{film_uuid}", response_model=Film)
 async def film_details(
-    film_id: str, film_service: FilmService = Depends(get_film_service)
+    film_uuid: str, film_service: FilmService = Depends(get_film_service)
 ) -> Film:
-    film = await film_service.get_by_id(film_id)
+    film = await film_service.get_by_id(film_uuid)
     if not film:
-        # Если фильм не найден, отдаём 404 статус
-        # Желательно пользоваться уже определёнными HTTP-статусами, которые содержат enum
-        # Такой код будет более поддерживаемым
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="film not found")
-
-    # Перекладываем данные из models.Film в Film
-    # Обратите внимание, что у модели бизнес-логики есть поле description
-    # Которое отсутствует в модели ответа API.
-    # Если бы использовалась общая модель для бизнес-логики и формирования ответов API
-    # вы бы предоставляли клиентам данные, которые им не нужны
-    # и, возможно, данные, которые опасно возвращать
-    return Film(
-        id=film.id,
-        title=film.title,
-        description=film.description,
-        imdb_rating=film.imdb_rating,
-        genres=film.genres,
-        writers=film.writers,
-        actors=film.actors,
-        directors=film.directors,
-    )
+    return Film.parse_obj(film)
