@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
@@ -28,25 +29,23 @@ class Film(BaseModel):
     directors: List[PersonForFilm] = None
 
 
-@router.get("/")
-async def films_list(
+async def get_films(
     film_service: FilmService = Depends(get_film_service),
-    filter_genre: Optional[str] = Query(None, alias="filter[genre]"),
+    filter_genre: Optional[str] = "",
     sort: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$"),
-    page_number: int = Query(1, alias="page[number]"),
-    page_size: int = Query(50, alias="page[size]"),
-) -> List[Dict]:
-
-    # пример запроса
-    # http://localhost:8000/api/v1/film/?sort=-imdb_rating&filter[genre]=%3Ccomedy-uuid%3E&page[size]=10&page[number]=2
-
-    films = await film_service.get_all_films(
+    page_number: int = 1,
+    page_size: int = 50,
+    query: Optional[str] = "",
+):
+    films = await film_service.get_films(
         sort=sort,
-        filter_genre=filter_genre,
+        filter_genre=filter_genre if filter_genre is not Query(None) else "",
         page_number=page_number,
         page_size=page_size,
+        query=str(query),
     )
-    print(sort, filter_genre, page_number, page_size)
+    if "error" in films:
+        return HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=films["error"])
     if not films:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND, detail="not one film found"
@@ -59,6 +58,40 @@ async def films_list(
         }
         for film in films
     ]
+
+
+@router.get("/")
+async def films_list(
+    film_service: FilmService = Depends(get_film_service),
+    filter_genre: Optional[str] = Query(None, alias="filter[genre]"),
+    sort: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$"),
+    page_number: int = Query(1, alias="page[number]"),
+    page_size: int = Query(50, alias="page[size]"),
+) -> List[Dict]:
+    return await get_films(
+        film_service,
+        sort=sort,
+        filter_genre=filter_genre,
+        page_number=page_number,
+        page_size=page_size,
+    )
+
+
+@router.get("/search")
+async def films_search(
+    film_service: FilmService = Depends(get_film_service),
+    sort_: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$", alias="page[size]"),
+    page_number_: int = Query(1, alias="page[number]"),
+    page_size_: int = Query(50, alias="page[size]"),
+    query_: Optional[str] = Query(None, title="Поисковая строка", alias="query"),
+) -> List[Dict]:
+    return await get_films(
+        film_service,
+        sort=sort_,
+        query=query_,
+        page_number=page_number_,
+        page_size=page_size_,
+    )
 
 
 # Внедряем FilmService с помощью Depends(get_film_service)
