@@ -1,16 +1,12 @@
 import logging
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.responses import ORJSONResponse
-
-from api.v1 import film, genre, person
 from core import config
-from core.logger import LOGGING
 from db import connections
-
-# from api.v1 import genre
-
+from fastapi import FastAPI
+from core.logger import LOGGING
+from api.v1 import film, genre, person
+from fastapi.responses import ORJSONResponse
 
 app = FastAPI(
     title=config.PROJECT_NAME,
