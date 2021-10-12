@@ -1,9 +1,10 @@
-from uuid import UUID
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, Request
+
+from core.utilites import get_path_from_url
+from models.genre import Genre
 from services.genre import GenreService, get_genre_service
 
 router = APIRouter()
@@ -11,37 +12,21 @@ router = APIRouter()
 genres = Optional[List[Dict[str, str]]]
 
 
-# TODO дописать модель, реализовать выгрузку. Пока только заглушка
-
-
-class Genre(BaseModel):
-    uuid: UUID
-    name: str
-
-
-@router.get("/", response_model=genres)
+@router.get("/")
 async def genre_list(
-    genre_service: GenreService = Depends(get_genre_service),
-) -> List[Genre]:
-    genres = await genre_service.get_all_genres()
-    if not genres:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="not one genre found"
-        )
-
-    return genres
+        request: Request,
+        genre_service: GenreService = Depends(get_genre_service),
+) -> list[Genre]:
+    return await genre_service.genre_list(get_path_from_url(request))
 
 
-# Внедряем GenreService с помощью Depends(get_genre_service)
-@router.get("/{genre_uuid}", response_model=Genre)
+@router.get("/{genre_uuid}")
 async def genre_details(
-    genre_uuid: str, genre_service: GenreService = Depends(get_genre_service)
-) -> Genre:
-    genre = await genre_service.get_by_uuid(genre_uuid)
-    if not genre:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="genre not found")
-
-    return Genre(
-        uuid=genre.uuid,
-        name=genre.name,
-    )
+        request: Request,
+        genre_uuid: str,
+        genre_service: GenreService = Depends(get_genre_service),
+) -> Optional[Genre]:
+    genre = await genre_service.get_by_uuid(get_path_from_url(request), genre_uuid)
+    if genre:
+        return genre
+    raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="genre not found")

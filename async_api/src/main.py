@@ -1,12 +1,13 @@
 import logging
 
 import uvicorn
-from core import config
-from db import connections
 from fastapi import FastAPI
-from core.logger import LOGGING
-from api.v1 import film, genre, person
 from fastapi.responses import ORJSONResponse
+
+from api.v1 import film, genre, person
+from core import config
+from core.logger import LOGGING
+from db import connections
 
 # from api.v1 import genre
 
@@ -33,7 +34,7 @@ async def shutdown():
 # Теги указываем для удобства навигации по документации
 app.include_router(film.router, prefix="/api/v1/film", tags=["film"])
 app.include_router(person.router, prefix="/api/v1/person", tags=["person"])
-app.include_router(genre.router, prefix="/api/v1/genre", tags=["genre"])
+app.include_router(genre.router, prefix="/api/v1/genres", tags=["genre"])
 
 if __name__ == "__main__":
     uvicorn.run(
