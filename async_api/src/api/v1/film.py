@@ -20,7 +20,7 @@ class PersonForFilm(BaseModel):
 class Film(BaseModel):
     uuid: str
     title: str
-    description: str
+    description: str = None
     imdb_rating: float = None
     genres: List[Genre] = None
     writers: List[PersonForFilm] = None
@@ -69,14 +69,4 @@ async def film_details(
     film = await film_service.get_by_id(film_uuid)
     if not film:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="film not found")
-
-    return Film(
-        uuid=film.uuid,
-        title=film.title,
-        description=film.description,
-        imdb_rating=film.imdb_rating,
-        genres=film.genres,
-        writers=film.writers,
-        actors=film.actors,
-        directors=film.directors,
-    )
+    return Film.parse_obj(film)
