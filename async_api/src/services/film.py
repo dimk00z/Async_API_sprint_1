@@ -1,3 +1,4 @@
+from traceback import print_tb
 from functools import lru_cache
 from typing import Dict, List, Optional
 
@@ -36,7 +37,7 @@ class FilmService:
     async def _get_film_from_elastic(self, film_id: str) -> Optional[Film]:
         try:
             doc = await self.elastic.get("movies", film_id)
-            return Film(id=doc["_id"], **doc["_source"])
+            return Film(**doc["_source"])  # uuid=doc["_id"],
         except NotFoundError as not_found_exception:
             logger.error(not_found_exception)
 
@@ -56,9 +57,7 @@ class FilmService:
         # Выставляем время жизни кеша — 5 минут
         # https://redis.io/commands/set
         # pydantic позволяет сериализовать модель в json
-        await self.redis.set(
-            film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS
-        )
+        await self.redis.set(film.uuid, film.json(), expire=FILM_CACHE_EXPIRE_IN_SECONDS)
 
     async def get_all_films(
         self,
@@ -93,13 +92,32 @@ class FilmService:
         page_size: int,
     ) -> List[dict]:
         try:
+            imdb_sorting = "desc"
+            if sort == "imdb_rating":
+                imdb_sorting = "asc"
+            first_field = 0 if page_number in (0, 1) else page_number * page_size
             films = []
+            print("111111111111111111111111111111111")
+            print(filter_genre)
             search_results = await self.elastic.search(
                 index="movies",
                 body={"query": {"match_all": {}}},
+                # body={
+                #     "query": {
+                #         "nested": {
+                #             "path": "genres",
+                #             "query": {
+                #                 "bool": {"must": [{"match": {f"genres.uuid": filter_genre}}]}
+                #             },
+                #         }
+                #     }
+                # },
                 filter_path=["hits.hits._id", "hits.hits._source"],
-                size=20,
+                size=page_size,
+                from_=first_field,
+                sort=f"imdb_rating:{imdb_sorting},",
             )
+            print(search_results)
             for res in search_results["hits"]["hits"]:
                 films.append(
                     {
@@ -110,7 +128,7 @@ class FilmService:
                 )
             return films
 
-        except NotFoundError as not_found_exception:
+        except (NotFoundError, KeyError) as not_found_exception:
             logger.error(not_found_exception)
 
 
