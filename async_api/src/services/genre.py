@@ -11,8 +11,7 @@ from services.base import MainService
 
 
 class GenreService(MainService):
-    model_name = 'Genre'
-    index = "genres"
+    index = "genre"
     model = Genre
 
     async def genre_list(self, path: str) -> list[Genre]:
