@@ -3,6 +3,7 @@ import logging
 import backoff
 import aioredis
 from core import config
+from aiocache import caches
 from db import redis, elastic
 from elasticsearch import AsyncElasticsearch
 
@@ -19,6 +20,20 @@ def backoff_hdlr(details):
 async def init_redis_connection():
     redis.redis = await aioredis.create_redis_pool(
         (config.REDIS_HOST, config.REDIS_PORT), minsize=10, maxsize=20
+    )
+
+    caches.set_config(
+        {
+            "default": {
+                "cache": "aiocache.RedisCache",
+                "endpoint": config.REDIS_HOST,
+                "port": config.REDIS_PORT,
+                "pool_min_size": 5,
+                "pool_max_size": 10,
+                "timeout": 1,
+                "serializer": {"class": "aiocache.serializers.PickleSerializer"},
+            }
+        }
     )
 
 
