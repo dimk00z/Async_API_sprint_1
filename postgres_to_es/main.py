@@ -1,61 +1,104 @@
 import logging
-from datetime import datetime
 from os import environ
 from time import sleep
-from typing import List
+from datetime import datetime
+from typing import Dict, List
 
-import elasticsearch
 import psycopg2
-from dotenv import load_dotenv
+import elasticsearch
 from redis import Redis
-
-from connections import connect_to_elastic, connect_to_postges, connect_to_redis
-from correct_terminate import TerminateProtected
-from extractor import PostgresExtractor
-from loader import ESLoader
+from dotenv import load_dotenv
+from loader.indexes import INDEXES
+from loader.loader import ESLoader
+from state import State, RedisStorage
 from setting_loaders import load_etl_settings
-from state import RedisStorage, State
-from transformer import Transformer
+from correct_terminate import TerminateProtected
+from connections import connect_to_redis, connect_to_elastic, connect_to_postges
+from transformers import (
+    BaseTransformer,
+    GenresTransformer,
+    MoviesTransformer,
+    PersonTransformer,
+)
+from extractors import (
+    BaseExtractor,
+    GenresPostgresExtractor,
+    MoviesPostgresExtractor,
+    PersonsPostgresExtractor,
+)
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
 
 
-def start_etl(pg_conn, es_loader: ESLoader, state: State):
-
-    last_state = state.get_state("last_updated_at")
-    postgres_extractor: PostgresExtractor = PostgresExtractor(
+def proccess_index_etl(
+    pg_conn,
+    es_loader: ESLoader,
+    Extactor: BaseExtractor,
+    Tranformer: BaseTransformer,
+    last_state: str,
+    state: State,
+    index: str,
+):
+    extractor: BaseExtractor = Extactor(
         pg_conn=pg_conn,
         cursor_limit=int(environ.get("POSTGRES_PAGE_LIMIT")),
-        last_state=last_state if last_state else "",
+        last_state=last_state,
     )
-    loaded_films_number: int = 0
+    loaded_rows_number: int = 0
 
-    # со слов Дианы можно оставить без корутин, в целом тут логика похожая
-    for extracted_movies in postgres_extractor.extract_data():
-
-        transformer = Transformer(extracted_movies=extracted_movies)
-        transformed_movies: List[dict] = transformer.transform_movies()
-
-        es_loader.bulk_index(transformed_data=transformed_movies, last_state=last_state)
-
-        loaded_films_number = len(extracted_movies)
-        logging.info("Loaded %d movies to Elasticsearch", loaded_films_number)
-
-        last_updated_at = extracted_movies[-1].updated_at
-        state.set_state("last_updated_at", last_updated_at)
-
-    if loaded_films_number == 0:
-        logging.info("There no films for ETL")
+    for extracted_data in extractor.extract_data():
+        transformer = Tranformer(extracted_data=extracted_data)
+        transformed_data: List[dict] = transformer.transform_data()
+        loaded_rows_number = len(transformed_data)
+        es_loader.bulk_index(
+            transformed_data=transformed_data, last_state=last_state, index_name=index
+        )
+        state.set_state(f"{index}_updated_at", extracted_data[-1].updated_at)
+        logging.info("Loaded %d %s to Elasticsearch", loaded_rows_number, index)
+    if loaded_rows_number == 0:
+        logging.info("There no %s for ETL", index)
 
 
-def create_es_index(elastic_settings):
+def start_etl(pg_conn, es_loader: ESLoader, state: State):
+    states: Dict[str, str] = {
+        "movies_updated_at": state.get_state("movies_updated_at"),
+        "genres_updated_at": state.get_state("genres_updated_at"),
+        "persons_updated_at": state.get_state("persons_updated_at"),
+    }
+    indexes = {
+        "movies": {
+            "extactor": MoviesPostgresExtractor,
+            "tranformer": MoviesTransformer,
+        },
+        "genres": {
+            "extactor": GenresPostgresExtractor,
+            "tranformer": GenresTransformer,
+        },
+        "persons": {
+            "extactor": PersonsPostgresExtractor,
+            "tranformer": PersonTransformer,
+        },
+    }
+    for index in indexes:
+        proccess_index_etl(
+            pg_conn=pg_conn,
+            es_loader=es_loader,
+            Extactor=indexes[index]["extactor"],
+            Tranformer=indexes[index]["tranformer"],
+            last_state=states[f"{index}_updated_at"],
+            state=state,
+            index=index,
+        )
+
+
+def create_es_indexes(elastic_settings):
 
     es: elasticsearch.client.Elasticsearch = connect_to_elastic(elastic_settings.host)
-    es_loader = ESLoader(es=es, index_name=elastic_settings.index)
-    es_loader.drop_index()
-    es_loader.create_index()
+    es_loader = ESLoader(es=es, indexes=INDEXES)
+    es_loader.drop_indexes()
+    es_loader.create_indexes()
     es.transport.close()
 
 
@@ -70,15 +113,16 @@ def main():
     redis_adapter: Redis = connect_to_redis(redis_settings.dict())
 
     if environ.get("ES_SHOULD_DROP_INDEX") == "TRUE":
-        create_es_index(elastic_settings)
+        create_es_indexes(elastic_settings)
         redis_adapter.flushdb(redis_db)
-    pg_conn: psycopg2.extensions.connection = connect_to_postges(postgres_settings.dict())
+
+    pg_conn: psycopg2.extensions.connection = connect_to_postges(
+        postgres_settings.dict()
+    )
     state = State(storage=RedisStorage(redis_adapter=redis_adapter, redis_db=redis_db))
     es: elasticsearch.client.Elasticsearch = connect_to_elastic(elastic_settings.host)
-    es_loader = ESLoader(es)
+    es_loader = ESLoader(es, indexes=INDEXES)
 
-    # спасибо за предложения по оптимизаци
-    # но оставлю свой вариант, т.к. этот класс мне будет проще переиспользовать
     with TerminateProtected(pg_conn=pg_conn, es=es):
         while True:
             start_etl(pg_conn=pg_conn, es_loader=es_loader, state=state)

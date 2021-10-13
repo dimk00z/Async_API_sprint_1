@@ -3,22 +3,12 @@ from typing import List
 
 import backoff
 import psycopg2
-
 from connections import backoff_hdlr
-from models import FilmWork, Person
+from models import Genre, Person, FilmWork
+from extractors.base_extractor import BaseExtractor
 
 
-class PostgresExtractor:
-    def __init__(
-        self,
-        pg_conn: psycopg2.extensions.connection,
-        last_state: str = "",
-        cursor_limit: int = 200,
-    ) -> None:
-        self.pg_conn = pg_conn
-        self.last_state: str = last_state
-        self.cursor_limit = cursor_limit
-
+class MoviesPostgresExtractor(BaseExtractor):
     def fetch_persons(self, row: psycopg2.extras.DictRow, movie: FilmWork):
         try:
             roles_dict_name = f'{row["role"]}s'
@@ -30,25 +20,35 @@ class PostgresExtractor:
 
     def fetch_movie_row(self, row: psycopg2.extras.DictRow) -> FilmWork:
         film_work = FilmWork(
-            id=row["fw_id"],
+            uuid=row["fw_id"],
             title=row["title"],
             description=row["description"],
             rating=row["rating"],
             type=row["type"],
             created_at=row["created_at"],
             updated_at=row["updated_at"],
-            genres=row["genres"],
+            genres=set(),
         )
+        for genre in row["genres"]:
+            film_work.genres.add(Genre(uuid=genre["id"], name=genre["name"]))
 
         for persons in ("directors", "actors", "writers"):
             if row[persons]:
                 for person in row[persons]:
                     getattr(film_work, persons).add(
-                        Person(id=person["id"], full_name=person["name"], role=persons[:-1])
+                        Person(
+                            uuid=person["id"],
+                            full_name=person["name"],
+                            role=persons[:-1],  # это просто убирает букву s
+                        )
                     )
         return film_work
 
-    @backoff.on_exception(backoff.expo, (psycopg2.Error, psycopg2.OperationalError), on_backoff=backoff_hdlr)
+    @backoff.on_exception(
+        backoff.expo,
+        (psycopg2.Error, psycopg2.OperationalError),
+        on_backoff=backoff_hdlr,
+    )
     def extract_data(self) -> List[FilmWork]:
         movies_id_query: str = " ".join(
             [
@@ -68,7 +68,7 @@ class PostgresExtractor:
             fw.rating as rating,
             fw.created_at, 
             fw.updated_at, 
-            ARRAY_AGG(DISTINCT g.name) AS genres,
+	        JSON_AGG(DISTINCT jsonb_build_object('id', g.id, 'name', g.name)) AS genres,
 	        JSON_AGG(DISTINCT jsonb_build_object('id', p.id, 'name', p.full_name)) FILTER (WHERE pfw.role = 'director') AS directors,
             JSON_AGG(DISTINCT jsonb_build_object('id', p.id, 'name', p.full_name)) FILTER (WHERE pfw.role = 'actor') AS actors,
             JSON_AGG(DISTINCT jsonb_build_object('id', p.id, 'name', p.full_name)) FILTER (WHERE pfw.role = 'writer') AS writers
@@ -85,7 +85,9 @@ class PostgresExtractor:
             movies_id_cursor.execute(movies_id_query)
             while data := movies_id_cursor.fetchmany(self.cursor_limit):
                 movies: List[FilmWork] = []
-                with self.pg_conn.cursor(name="movies_extented_data_cursor") as movies_extented_data_cursor:
+                with self.pg_conn.cursor(
+                    name="movies_extented_data_cursor"
+                ) as movies_extented_data_cursor:
 
                     movies_extented_data_query = movies_info_query.format(
                         ",".join((f"'{id}'" for id, _ in data))

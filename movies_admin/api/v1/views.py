@@ -1,14 +1,14 @@
-from typing import List
 from uuid import UUID
+from typing import List
 
-from django.contrib.postgres.aggregates import ArrayAgg
-from django.core.paginator import Page, Paginator
-from django.db.models import Model, Q
+from movies.models import FilmWork
+from django.db.models import Q, Model
 from django.db.models.query import QuerySet
 from django.http import Http404, JsonResponse
-from django.views.generic.detail import BaseDetailView
+from django.core.paginator import Page, Paginator
 from django.views.generic.list import BaseListView
-from movies.models import FilmWork
+from django.views.generic.detail import BaseDetailView
+from django.contrib.postgres.aggregates import ArrayAgg
 
 
 class MoviesApiMixin:

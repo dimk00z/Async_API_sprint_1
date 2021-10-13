@@ -65,6 +65,28 @@ services:
     networks:
       - movie_project_net
 
+  movies_async_api:
+    container_name: movies_async_api
+    build:
+      context: ./async_api
+      dockerfile: Dockerfile
+    command: >
+      uvicorn main:app
+        --host 0.0.0.0
+        --port 8000
+        --workers 1
+        --use-colors
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - movies_elastic
+      - movies_redis
+    networks:
+      - movie_project_net
+
   movies_nginx:
     container_name: movies_nginx
     build: 

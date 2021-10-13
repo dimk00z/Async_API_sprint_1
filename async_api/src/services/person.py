@@ -1,68 +1,118 @@
-from functools import lru_cache
+import asyncio
+import logging
+from uuid import UUID
 from typing import Optional
+from functools import lru_cache
 
-from aioredis import Redis
-from db.elastic import get_elastic
-from db.redis import get_redis
-from elasticsearch import AsyncElasticsearch
-from elasticsearch._async.client import logger
-from elasticsearch.exceptions import NotFoundError
+from aiocache import cached
 from fastapi import Depends
-from models.person import Person
+from db.elastic import get_elastic
+from db.redis import get_redis_cache_config
+from elasticsearch import AsyncElasticsearch
+from elasticsearch.exceptions import NotFoundError
+from models.person import Person, PersonFilm, PersonRole
 
-PERSON_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
-# TODO пока только заглушка
+PERSON_ELASTIC_INDEX = "persons"
+PERSON_REDIS_NAMESPACE = "persons"
+PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
+
+logger = logging.getLogger(__name__)
 
 
 class PersonService:
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
-        self.redis = redis
+    """В этом сервисе реализовано кеширование через декораторы `aiocache`."""
+
+    def __init__(self, elastic: AsyncElasticsearch):
         self.elastic = elastic
 
-    # get_by_id возвращает объект фильма. Он опционален, так как фильм может отсутствовать в базе
-    async def get_by_id(self, person_id: str) -> Optional[Person]:
-        # Пытаемся получить данные из кеша, потому что оно работает быстрее
-        person = await self._person_from_cache(person_id)
-        if not person:
-            # Если фильма нет в кеше, то ищем его в Elasticsearch
-            person = await self._get_person_from_elastic(person_id)
-            if not person:
-                # Если он отсутствует в Elasticsearch, значит, фильма вообще нет в базе
-                return None
-            # Сохраняем фильм  в кеш
-            await self._put_person_to_cache(person)
-
-        return person
-
-    async def _get_person_from_elastic(self, person_id: str) -> Optional[Person]:
+    @cached(
+        ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
+    )
+    async def get_by_uuid(self, person_uuid: UUID) -> Optional[Person]:
         try:
-            doc = await self.elastic.get("person", person_id)
-            return Person(id=doc["_id"], **doc["_source"])
-        except NotFoundError as not_found_exception:
-            logger.error(not_found_exception)
+            doc = await self.elastic.get(
+                index="persons", id=str(person_uuid), filter_path="_source"
+            )
+            return Person(**doc["_source"])
+        except NotFoundError:
+            logger.error("<Person %s> not found in elastic!", person_uuid)
 
-    async def _person_from_cache(self, person_id: str) -> Optional[Person]:
-        # Пытаемся получить данные о фильме из кеша, используя команду get
-        # https://redis.io/commands/get
-        data = await self.redis.get(person_id)
-        if not data:
-            return None
+    @cached(
+        ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
+    )
+    async def get_by_full_name(
+        self, query_full_name: str, page_number: int = 0, page_size: int = 25
+    ) -> list[Person]:
+        persons = await self.elastic.search(
+            index="persons",
+            query={
+                "match": {"full_name": {"query": query_full_name, "fuzziness": "auto"}}
+            },
+            filter_path=["hits.hits._source"],
+            from_=page_number * page_size,
+            size=page_size,
+        )
+        persons_hits = [] if not persons else persons["hits"]["hits"]
+        return [Person(**doc["_source"]) for doc in persons_hits]
 
-        # pydantic предоставляет удобное API для создания объекта моделей из json
-        person = person.parse_raw(data)
-        return person
+    @cached(
+        ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
+    )
+    async def get_films_by_person_uuid(self, person_uuid: UUID) -> list[PersonFilm]:
+        films_as_actor, films_as_writer, films_as_director = await asyncio.gather(
+            self.get_films_by_role(
+                person_uuid=person_uuid, elastic_path="actors", role=PersonRole.actor
+            ),
+            self.get_films_by_role(
+                person_uuid=person_uuid, elastic_path="writers", role=PersonRole.writer
+            ),
+            self.get_films_by_role(
+                person_uuid=person_uuid,
+                elastic_path="directors",
+                role=PersonRole.director,
+            ),
+        )
+        films = films_as_actor + films_as_writer + films_as_director
+        return films
 
-    async def _put_person_to_cache(self, person: Person):
-        # Сохраняем данные о фильме, используя команду set
-        # Выставляем время жизни кеша — 5 минут
-        # https://redis.io/commands/set
-        # pydantic позволяет сериализовать модель в json
-        await self.redis.set(person.id, person.json(), expire=PERSON_CACHE_EXPIRE_IN_SECONDS)
+    @cached(
+        ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
+    )
+    async def get_films_by_role(
+        self, *, person_uuid: UUID, elastic_path: str, role: PersonRole
+    ) -> list[PersonFilm]:
+        films = await self.elastic.search(
+            index="movies",
+            query={
+                "nested": {
+                    "path": elastic_path,
+                    "query": {
+                        "bool": {
+                            "must": [{"match": {f"{elastic_path}.uuid": person_uuid}}]
+                        }
+                    },
+                }
+            },
+            fields=["hits.hits._source.uuid", "hits.hits._source.title"],
+        )
+        if not films:
+            return []
+        films = [
+            PersonFilm(role=role, **film["_source"]) for film in films["hits"]["hits"]
+        ]
+        return films
 
 
 @lru_cache()
 def get_person_service(
-    redis: Redis = Depends(get_redis),
     elastic: AsyncElasticsearch = Depends(get_elastic),
 ) -> PersonService:
-    return PersonService(redis, elastic)
+    return PersonService(elastic)

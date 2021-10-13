@@ -1,32 +1,32 @@
+from uuid import UUID
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from models.genre import Genre
+from core.utilites import get_path_from_url
 from services.genre import GenreService, get_genre_service
+from fastapi import Depends, Request, APIRouter, HTTPException
 
 router = APIRouter()
 
-persons = Optional[List[Dict[str, str]]]
+genres = Optional[List[Dict[str, str]]]
 
 
-# TODO дописать модель, реализовать выгрузку. Пока только заглушка
+@router.get("/")
+async def genre_list(
+    request: Request,
+    genre_service: GenreService = Depends(get_genre_service),
+) -> list[Genre]:
+    return await genre_service.genre_list(get_path_from_url(request))
 
 
-class Genre(BaseModel):
-    id: str
-    title: str
-
-
-# Внедряем FilmService с помощью Depends(get_film_service)
-@router.get("/{genre_id}", response_model=Genre)
-async def genre_details(film_id: str, film_service: GenreService = Depends(get_genre_service)) -> Genre:
-    genre = await genre_service.get_by_id(film_id)
-    if not genre:
-
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="gerne not found")
-
-    return Genre(
-        id=genre.id,
-        title=genre.title,
-    )
+@router.get("/{genre_uuid}")
+async def genre_details(
+    request: Request,
+    genre_uuid: UUID,
+    genre_service: GenreService = Depends(get_genre_service),
+) -> Optional[Genre]:
+    genre = await genre_service.get_by_uuid(get_path_from_url(request), genre_uuid)
+    if genre:
+        return genre
+    raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="genre not found")

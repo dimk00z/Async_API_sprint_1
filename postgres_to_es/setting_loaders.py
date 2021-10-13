@@ -1,7 +1,7 @@
 import logging
 from typing import Tuple
 
-from pydantic import BaseSettings, Field
+from pydantic import Field, BaseSettings
 from pydantic.error_wrappers import ValidationError
 
 

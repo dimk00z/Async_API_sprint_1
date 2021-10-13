@@ -1,18 +1,23 @@
-from typing import Dict, List, Optional
+from uuid import UUID
+from typing import List
 
+from pydantic import BaseModel
+
+from .genre import Genre
 from .abstract_model import AbstractModel
 
-persons = Optional[List[Dict[str, str]]]
-object_names = Optional[List[str]]
+
+class PersonForFilm(BaseModel):
+    uuid: UUID
+    full_name: str
 
 
 class Film(AbstractModel):
+    uuid: UUID
     title: str
-    description: str
+    description: str = None
     imdb_rating: float = None
-    genres: object_names = None
-    writers: persons = None
-    actors: persons = None
-    directors: persons = None
-    actors_names: object_names = None
-    writers_names: object_names = None
+    genres: List[Genre] = None
+    writers: List[PersonForFilm] = None
+    actors: List[PersonForFilm] = None
+    directors: List[PersonForFilm] = None
