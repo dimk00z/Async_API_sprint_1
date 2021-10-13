@@ -41,7 +41,10 @@ class FilmService(MainService):
             )
 
         else:
-            return [self.model(**dict(doc)["_source"]) for doc in dict(response)["hits"]["hits"]]
+            return [
+                self.model(**dict(doc)["_source"])
+                for doc in dict(response)["hits"]["hits"]
+            ]
 
     async def _search(
         self,
@@ -63,7 +66,11 @@ class FilmService(MainService):
                 body["query"] = {
                     "nested": {
                         "path": "genres",
-                        "query": {"bool": {"must": [{"match": {f"genres.uuid": filter_genre}}]}},
+                        "query": {
+                            "bool": {
+                                "must": [{"match": {f"genres.uuid": filter_genre}}]
+                            }
+                        },
                     }
                 }
 
@@ -81,6 +88,7 @@ class FilmService(MainService):
                 sort=f"imdb_rating:{imdb_sorting},",
             )
             await self._put_to_cache(path, search_results)
+
             if search_results:
                 for res in search_results["hits"]["hits"]:
                     films.append(Film(**res["_source"]))
@@ -90,7 +98,6 @@ class FilmService(MainService):
             logger.error(not_found_exception)
         except RequestError as request_error:
             print(request_error, dir(request_error))
-            return {"error": request_error.info}
 
 
 @lru_cache()
