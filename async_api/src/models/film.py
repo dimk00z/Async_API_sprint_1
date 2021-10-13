@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from uuid import UUID
+from typing import List
 
 from pydantic import BaseModel
 
@@ -7,12 +8,12 @@ from .abstract_model import AbstractModel
 
 
 class PersonForFilm(BaseModel):
-    uuid: str
+    uuid: UUID
     full_name: str
 
 
 class Film(AbstractModel):
-    uuid: str
+    uuid: UUID
     title: str
     description: str = None
     imdb_rating: float = None
