@@ -13,7 +13,7 @@ CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 class MainService:
     # Определяем базовую модель и индекс, будет указываться при добавлении модели жанра
     model = BaseModel
-    index = ''
+    index = ""
 
     # Инициализация класса, определение настроек redis и elastic
     def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
@@ -28,9 +28,7 @@ class MainService:
 
     # Складываем кэш в редис. Ключ - path от url, значение - байтовый массив
     async def _put_to_cache(self, path: str, obj) -> None:
-        await self.redis.set(
-            path, orjson.dumps(obj), expire=CACHE_EXPIRE_IN_SECONDS
-        )
+        await self.redis.set(path, orjson.dumps(obj), expire=CACHE_EXPIRE_IN_SECONDS)
 
     # Получение значений по ключу path
     async def _get_values_from_cache(self, path: str):
@@ -72,12 +70,19 @@ class MainService:
             )
             if not response:
                 response = await self._get_from_elastic(
-                    self.elastic.search, index=self.index, body=body, filter_path=['hits.hits._id', 'hits.hits'
-                                                                                                    '._source']
+                    self.elastic.search,
+                    index=self.index,
+                    body=body,
+                    filter_path=["hits.hits._id", "hits.hits" "._source"],
                 )
                 await self._put_to_cache(path, response)
-                return [self.model(**doc["_source"]) for doc in response["hits"]["hits"]]
+                return [
+                    self.model(**doc["_source"]) for doc in response["hits"]["hits"]
+                ]
             else:
-                return [self.model(**dict(doc)["_source"]) for doc in dict(response)["hits"]["hits"]]
+                return [
+                    self.model(**dict(doc)["_source"])
+                    for doc in dict(response)["hits"]["hits"]
+                ]
         except elasticsearch.NotFoundError:
             return None

@@ -15,17 +15,17 @@ genres = Optional[List[Dict[str, str]]]
 
 @router.get("/")
 async def genre_list(
-        request: Request,
-        genre_service: GenreService = Depends(get_genre_service),
+    request: Request,
+    genre_service: GenreService = Depends(get_genre_service),
 ) -> list[Genre]:
     return await genre_service.genre_list(get_path_from_url(request))
 
 
 @router.get("/{genre_uuid}")
 async def genre_details(
-        request: Request,
-        genre_uuid: UUID,
-        genre_service: GenreService = Depends(get_genre_service),
+    request: Request,
+    genre_uuid: UUID,
+    genre_service: GenreService = Depends(get_genre_service),
 ) -> Optional[Genre]:
     genre = await genre_service.get_by_uuid(get_path_from_url(request), genre_uuid)
     if genre:

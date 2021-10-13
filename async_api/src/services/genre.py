@@ -1,17 +1,16 @@
 from functools import lru_cache
 
 from aioredis import Redis
-from elasticsearch import AsyncElasticsearch
 from fastapi import Depends
-
-from db.elastic import get_elastic
 from db.redis import get_redis
 from models.genre import Genre
+from db.elastic import get_elastic
 from services.base import MainService
+from elasticsearch import AsyncElasticsearch
 
 
 class GenreService(MainService):
-    index = "genre"
+    index = "genres"
     model = Genre
 
     async def genre_list(self, path: str) -> list[Genre]:
