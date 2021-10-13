@@ -4,4 +4,7 @@ from fastapi import Request
 
 
 def get_path_from_url(url: Request) -> str:
-    return str(urlparse(str(url.url)).path)
+    path = urlparse(str(url.url)).path
+    if url.url.query:
+        path = f"{path}?{url.url.query}"
+    return path
