@@ -1,11 +1,11 @@
-from typing import Optional, AnyStr, Callable
 from uuid import UUID
+from typing import AnyStr, Callable, Optional
 
-import elasticsearch
 import orjson
+import elasticsearch
 from aioredis import Redis
-from elasticsearch import AsyncElasticsearch
 from pydantic import BaseModel
+from elasticsearch import AsyncElasticsearch
 
 CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
