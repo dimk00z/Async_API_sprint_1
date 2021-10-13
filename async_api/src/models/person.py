@@ -1,10 +1,22 @@
-from typing import List
+from enum import Enum
+from uuid import UUID
 
 from .abstract_model import AbstractModel
 
 
+class PersonRole(str, Enum):
+    actor = "actor"
+    writer = "writer"
+    director = "director"
+
+
+class PersonFilm(AbstractModel):
+    uuid: UUID
+    title: str
+    role: PersonRole
+
+
 class Person(AbstractModel):
-    uuid: str
+    uuid: UUID
     full_name: str
-    role: str
-    film_ids: List[str]
+    films: list[PersonFilm] = []
