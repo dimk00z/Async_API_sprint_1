@@ -35,11 +35,11 @@ http://localhost:8000/api/v1/person/a5a8f573-3cee-4ccc-8a2b-91cb9f55250a/film
 ```
 ## Выполнили
 
-[Дмитрий Кузнецов](https://github.com/dimk00z)
+- [Дмитрий Кузнецов](https://github.com/dimk00z)
 
-[Арсений Егоров](https://github.com/marchinho11)
+- [Арсений Егоров](https://github.com/marchinho11)
 
-[Мурдашев Дмитрий](https://github.com/di3mus)
+- [Мурдашев Дмитрий](https://github.com/di3mus)
 
 
 
