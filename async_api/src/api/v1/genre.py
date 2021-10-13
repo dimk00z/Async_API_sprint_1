@@ -1,12 +1,11 @@
+from uuid import UUID
 from http import HTTPStatus
 from typing import Dict, List, Optional
-from uuid import UUID
 
-from fastapi import Depends, APIRouter, HTTPException, Request
-
-from core.utilites import get_path_from_url
 from models.genre import Genre
+from core.utilites import get_path_from_url
 from services.genre import GenreService, get_genre_service
+from fastapi import Depends, Request, APIRouter, HTTPException
 
 router = APIRouter()
 

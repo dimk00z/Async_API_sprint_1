@@ -4,12 +4,11 @@ from uuid import UUID
 from typing import Optional
 from functools import lru_cache
 
-from core import config
+from aiocache import cached
 from fastapi import Depends
-from aiocache import Cache, cached
 from db.elastic import get_elastic
+from db.redis import get_redis_cache_config
 from elasticsearch import AsyncElasticsearch
-from aiocache.serializers import PickleSerializer
 from elasticsearch.exceptions import NotFoundError
 from models.person import Person, PersonFilm, PersonRole
 
@@ -28,12 +27,8 @@ class PersonService:
 
     @cached(
         ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
-        serializer=PickleSerializer(),
         noself=True,
-        cache=Cache.REDIS,
-        endpoint=config.REDIS_HOST,
-        port=config.REDIS_PORT,
-        namespace=PERSON_REDIS_NAMESPACE,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
     )
     async def get_by_uuid(self, person_uuid: UUID) -> Optional[Person]:
         try:
@@ -46,17 +41,12 @@ class PersonService:
 
     @cached(
         ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
-        serializer=PickleSerializer(),
         noself=True,
-        cache=Cache.REDIS,
-        endpoint=config.REDIS_HOST,
-        port=config.REDIS_PORT,
-        namespace=PERSON_REDIS_NAMESPACE,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
     )
     async def get_by_full_name(
         self, query_full_name: str, page_number: int = 0, page_size: int = 25
     ) -> list[Person]:
-        # TODO: checks, validation of parameters
         persons = await self.elastic.search(
             index="persons",
             query={
@@ -71,12 +61,8 @@ class PersonService:
 
     @cached(
         ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
-        serializer=PickleSerializer(),
         noself=True,
-        cache=Cache.REDIS,
-        endpoint=config.REDIS_HOST,
-        port=config.REDIS_PORT,
-        namespace=PERSON_REDIS_NAMESPACE,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
     )
     async def get_films_by_person_uuid(self, person_uuid: UUID) -> list[PersonFilm]:
         films_as_actor, films_as_writer, films_as_director = await asyncio.gather(
@@ -97,12 +83,8 @@ class PersonService:
 
     @cached(
         ttl=PERSON_REDIS_CACHE_EXPIRE_IN_SECONDS,
-        serializer=PickleSerializer(),
         noself=True,
-        cache=Cache.REDIS,
-        endpoint=config.REDIS_HOST,
-        port=config.REDIS_PORT,
-        namespace=PERSON_REDIS_NAMESPACE,
+        **get_redis_cache_config(namespace=PERSON_REDIS_NAMESPACE),
     )
     async def get_films_by_role(
         self, *, person_uuid: UUID, elastic_path: str, role: PersonRole
