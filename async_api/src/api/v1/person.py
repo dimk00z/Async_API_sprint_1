@@ -71,8 +71,4 @@ async def person_details(
     if not person:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Person not found")
 
-    return Person(
-        uuid=person.uuid,
-        full_name=person.full_name,
-        films=person_films
-    )
+    return Person(uuid=person.uuid, full_name=person.full_name, films=person_films)
