@@ -1,8 +1,7 @@
+import logging
 from uuid import UUID
-from typing import AnyStr, Callable, Optional
+from typing import Callable
 
-import orjson
-import elasticsearch
 from aiocache import cached
 from pydantic import BaseModel
 from db.redis import get_redis_cache_config
@@ -33,14 +32,17 @@ class MainService:
         **get_redis_cache_config(),
     )
     async def get_by_uuid(self, uuid: UUID):
+        result_object = {}
         try:
             doc_ = await self._get_from_elastic(
                 self.elastic.get, index=self.index, id=str(uuid)
             )
-            return self.model(**doc_["_source"])
+            result_object = self.model(**doc_["_source"])
 
-        except (RequestError, NotFoundError):
-            return {}
+        except (RequestError, NotFoundError) as elastic_error:
+            logging.error(elastic_error)
+        finally:
+            return result_object
 
     @cached(
         ttl=CACHE_EXPIRE_IN_SECONDS,
@@ -59,10 +61,16 @@ class MainService:
         }
         if sort:
             search_options["sort"] = sort
+        result_objects = []
         try:
             response = await self._get_from_elastic(
                 self.elastic.search, **search_options
             )
-            return [self.model(**doc["_source"]) for doc in response["hits"]["hits"]]
-        except (RequestError, NotFoundError):
-            return []
+            if response:
+                result_objects = [
+                    self.model(**doc["_source"]) for doc in response["hits"]["hits"]
+                ]
+        except (RequestError, NotFoundError) as elastic_error:
+            logging.error(elastic_error)
+        finally:
+            return result_objects
