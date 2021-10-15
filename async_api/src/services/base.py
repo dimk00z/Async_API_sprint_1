@@ -46,19 +46,22 @@ class MainService:
 
     # Получение значений по uuid
     async def get_by_uuid(self, path: str, uuid: UUID):
-        try:
-            response = await self._get_values_from_cache(
-                path,
-            )
-            if not response:
+        response = await self._get_values_from_cache(
+            path,
+        )
+        if not response:
+            try:
                 doc_ = await self._get_from_elastic(
                     self.elastic.get, index=self.index, id=str(uuid)
                 )
                 await self._put_to_cache(path, doc_)
                 return self.model(**doc_["_source"])
+            except elasticsearch.NotFoundError:
+                return None
 
-        except elasticsearch.NotFoundError:
-            return None
+        return self.model(**dict(response)["_source"])
+
+
 
     # Поиск в соответствии с body
     async def _search(self, path: str, body: dict):
