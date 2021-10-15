@@ -30,7 +30,7 @@ class PersonService(MainService):
             from_=page_number * page_size,
             size=page_size,
         )
-        return [Person(**doc["_source"]) for doc in persons]
+        return [self.model(**doc["_source"]) for doc in persons]
 
     async def get_films_by_person_uuid(self, person_uuid: UUID) -> list[PersonFilm]:
         films_as_actor, films_as_writer, films_as_director = await asyncio.gather(
