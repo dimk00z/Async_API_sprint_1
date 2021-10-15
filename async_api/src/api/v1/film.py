@@ -76,7 +76,6 @@ async def films_search(
     )
 
 
-# Внедряем FilmService с помощью Depends(get_film_service)
 @router.get("/{film_uuid}", response_model=Film)
 async def film_details(
     film_uuid: str,
