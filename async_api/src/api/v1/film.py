@@ -4,7 +4,7 @@ from http import HTTPStatus
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel
-from core.utilites import get_path_from_url
+from core.utilites import get_path_from_request
 from services.film import FilmService, get_film_service
 from fastapi import Query, Depends, Request, APIRouter, HTTPException
 
@@ -74,7 +74,7 @@ async def films_list(
     page_size: int = Query(50, alias="page[size]"),
 ) -> List[Dict]:
     return await get_films(
-        path=get_path_from_url(request),
+        path=get_path_from_request(request),
         film_service=film_service,
         sort=sort,
         filter_genre=filter_genre,
@@ -93,7 +93,7 @@ async def films_search(
     query_: Optional[str] = Query(None, title="Поисковая строка", alias="query"),
 ) -> List[Dict]:
     return await get_films(
-        path=get_path_from_url(request),
+        path=get_path_from_request(request),
         film_service=film_service,
         sort=sort_,
         query=query_,
@@ -110,7 +110,7 @@ async def film_details(
     film_service: FilmService = Depends(get_film_service),
 ) -> Film:
     film = await film_service.get_by_uuid(
-        path=get_path_from_url(request), uuid=film_uuid
+        path=get_path_from_request(request), uuid=film_uuid
     )
 
     if not film:
