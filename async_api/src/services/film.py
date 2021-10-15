@@ -38,8 +38,20 @@ class FilmService(MainService):
             }
         elif query != "":
             body["query"] = {
-                "match": {"title": query},
-                "match": {"description": query},
+                "bool": {
+                    "should": [
+                        {
+                            "multi_match": {
+                                "query": query,
+                                "operator": "or",
+                                "fields": [
+                                    "title",
+                                    "description",
+                                ],
+                            }
+                        }
+                    ]
+                }
             }
 
         sort = f"imdb_rating:{imdb_sorting},"
