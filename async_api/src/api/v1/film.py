@@ -1,34 +1,13 @@
-import logging
-from uuid import UUID
 from http import HTTPStatus
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel
-from core.utilites import get_path_from_url
+from models.film import Film
 from services.film import FilmService, get_film_service
 from fastapi import Query, Depends, Request, APIRouter, HTTPException
-
-from .genre import Genre
 
 router = APIRouter()
 
 persons = Optional[List[Dict[str, str]]]
-
-
-class PersonForFilm(BaseModel):
-    uuid: UUID
-    full_name: str
-
-
-class Film(BaseModel):
-    uuid: UUID
-    title: str
-    description: str = None
-    imdb_rating: float = None
-    genres: List[Genre] = None
-    writers: List[PersonForFilm] = None
-    actors: List[PersonForFilm] = None
-    directors: List[PersonForFilm] = None
 
 
 async def get_films(
