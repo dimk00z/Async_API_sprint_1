@@ -61,15 +61,13 @@ class MainService:
 
         return self.model(**dict(response)["_source"])
 
-
-
     # Поиск в соответствии с body
     async def _search(self, path: str, body: dict):
-        try:
-            response = await self._get_values_from_cache(
-                path,
-            )
-            if not response:
+        response = await self._get_values_from_cache(
+            path,
+        )
+        if not response:
+            try:
                 response = await self._get_from_elastic(
                     self.elastic.search,
                     index=self.index,
@@ -80,10 +78,10 @@ class MainService:
                 return [
                     self.model(**doc["_source"]) for doc in response["hits"]["hits"]
                 ]
-            else:
-                return [
-                    self.model(**dict(doc)["_source"])
-                    for doc in dict(response)["hits"]["hits"]
-                ]
-        except elasticsearch.NotFoundError:
-            return None
+            except elasticsearch.NotFoundError:
+                return None
+
+        return [
+            self.model(**dict(doc)["_source"])
+            for doc in dict(response)["hits"]["hits"]
+        ]
