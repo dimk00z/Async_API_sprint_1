@@ -39,7 +39,7 @@ class FilmService(MainService):
         elif query != "":
             body["query"] = {
                 "multi_match": {
-                    "query": "Judgment",
+                    "query": query,
                     "fields": ["title", "description"],
                     "type": "best_fields",
                 }
@@ -49,7 +49,7 @@ class FilmService(MainService):
         return await self._search(
             body=body,
             sort=sort,
-            first_field=page_number * page_size,
+            first_field=page_number * page_size if page_number > 1 else 1,
             page_size=page_size,
         )
 
