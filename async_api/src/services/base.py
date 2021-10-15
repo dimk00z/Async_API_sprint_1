@@ -3,9 +3,11 @@ from typing import AnyStr, Callable, Optional
 
 import orjson
 import elasticsearch
-from aioredis import Redis
+from aiocache import cached
 from pydantic import BaseModel
+from db.redis import get_redis_cache_config
 from elasticsearch import AsyncElasticsearch
+from elasticsearch.exceptions import RequestError, NotFoundError
 
 CACHE_EXPIRE_IN_SECONDS = 60 * 5  # 5 минут
 
@@ -16,73 +18,45 @@ class MainService:
     index = ""
 
     # Инициализация класса, определение настроек redis и elastic
-    def __init__(self, redis: Redis, elastic: AsyncElasticsearch):
+    def __init__(self, elastic: AsyncElasticsearch):
 
-        self.redis = redis
         self.elastic = elastic
-
-    # Достаем кэш из редиса. В виде ключа используем path от url
-    async def _get_from_cache(self, path: str) -> Optional[AnyStr]:
-        response = await self.redis.get(path)
-        return response
-
-    # Складываем кэш в редис. Ключ - path от url, значение - байтовый массив
-    async def _put_to_cache(self, path: str, obj) -> None:
-        await self.redis.set(path, orjson.dumps(obj), expire=CACHE_EXPIRE_IN_SECONDS)
-
-    # Получение значений по ключу path
-    async def _get_values_from_cache(self, path: str):
-        response = await self._get_from_cache(path)
-        if response:
-            return orjson.loads(response)
-
-        return response
 
     # Абстрактный вызов метода в Elastic. Можно вызывать любой.
     async def _get_from_elastic(self, es_method: Callable, **kwargs):
         response = await es_method(**kwargs)
-
         return response
 
-    # Получение значений по uuid
-    async def get_by_uuid(self, path: str, uuid: UUID):
+    @cached(
+        ttl=CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(),
+    )
+    async def get_by_uuid(self, uuid: UUID):
         try:
-            response = await self._get_values_from_cache(
-                path,
-            )
-            if not response:
-                doc_ = await self._get_from_elastic(
-                    self.elastic.get, index=self.index, id=str(uuid)
-                )
-                await self._put_to_cache(path, doc_)
-                return self.model(**doc_["_source"])
-            else:
-                return self.model(**dict(response)["_source"])
+            doc_ = await self._get_from_elastic(self.elastic.get, index=self.index, id=str(uuid))
+            return self.model(**doc_["_source"])
 
-        except elasticsearch.NotFoundError:
-            return None
+        except (RequestError, NotFoundError):
+            return {}
 
-    # Поиск в соответствии с body
-    async def _search(self, path: str, body: dict):
+    @cached(
+        ttl=CACHE_EXPIRE_IN_SECONDS,
+        noself=True,
+        **get_redis_cache_config(),
+    )
+    async def _search(self, body: dict, page_size: int = 50, first_field: int = 1, sort: str = ""):
+        search_options = {
+            "index": self.index,
+            "body": body,
+            "filter_path": ["hits.hits._id", "hits.hits" "._source"],
+            "size": page_size,
+            "from_": first_field,
+        }
+        if sort:
+            search_options["sort"] = sort
         try:
-            response = await self._get_values_from_cache(
-                path,
-            )
-            if not response:
-                response = await self._get_from_elastic(
-                    self.elastic.search,
-                    index=self.index,
-                    body=body,
-                    filter_path=["hits.hits._id", "hits.hits" "._source"],
-                )
-                await self._put_to_cache(path, response)
-                return [
-                    self.model(**doc["_source"]) for doc in response["hits"]["hits"]
-                ]
-            else:
-                return [
-                    self.model(**dict(doc)["_source"])
-                    for doc in dict(response)["hits"]["hits"]
-                ]
-        except elasticsearch.NotFoundError:
-            return None
+            response = await self._get_from_elastic(self.elastic.search, **search_options)
+            return [self.model(**doc["_source"]) for doc in response["hits"]["hits"]]
+        except (RequestError, NotFoundError):
+            return []
