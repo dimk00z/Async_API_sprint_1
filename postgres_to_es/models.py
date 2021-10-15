@@ -29,7 +29,7 @@ class FilmWork:
     type: str = None
     created_at: datetime = None
     updated_at: datetime = None
-    actors: Set[Person] = field(default_factory=set)
-    directors: Set[Person] = field(default_factory=set)
-    writers: Set[Person] = field(default_factory=set)
-    genres: Set[Genre] = field(default_factory=set)
+    actors: set[Person] = field(default_factory=set)
+    directors: set[Person] = field(default_factory=set)
+    writers: set[Person] = field(default_factory=set)
+    genres: set[Genre] = field(default_factory=set)

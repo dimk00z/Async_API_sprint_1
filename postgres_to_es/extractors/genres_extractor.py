@@ -1,6 +1,3 @@
-import logging
-from typing import List
-
 import backoff
 import psycopg2
 from models import Genre
@@ -18,7 +15,7 @@ class GenresPostgresExtractor(BaseExtractor):
         (psycopg2.Error, psycopg2.OperationalError),
         on_backoff=backoff_hdlr,
     )
-    def extract_data(self) -> List[Genre]:
+    def extract_data(self) -> list[Genre]:
         genres_query: str = " ".join(
             [
                 "SELECT id as uuid, updated_at, name",
@@ -30,7 +27,7 @@ class GenresPostgresExtractor(BaseExtractor):
         with self.pg_conn.cursor(name="genres_id_cursor") as genres_id_cursor:
             genres_id_cursor.execute(genres_query)
             while data := genres_id_cursor.fetchmany(self.cursor_limit):
-                genres: List[Genre] = []
+                genres: list[Genre] = []
                 for genre_row in data:
                     genres.append(self.fetch_genre_row(row=genre_row))
                 yield genres

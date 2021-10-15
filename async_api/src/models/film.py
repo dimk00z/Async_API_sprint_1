@@ -1,5 +1,4 @@
 from uuid import UUID
-from typing import List
 
 from pydantic import BaseModel
 
@@ -17,7 +16,7 @@ class Film(AbstractModel):
     title: str
     description: str = None
     imdb_rating: float = None
-    genres: List[Genre] = None
-    writers: List[PersonForFilm] = None
-    actors: List[PersonForFilm] = None
-    directors: List[PersonForFilm] = None
+    genres: list[Genre] = None
+    writers: list[PersonForFilm] = None
+    actors: list[PersonForFilm] = None
+    directors: list[PersonForFilm] = None
