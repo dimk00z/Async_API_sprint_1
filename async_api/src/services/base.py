@@ -1,6 +1,5 @@
 import logging
 from uuid import UUID
-from typing import Callable
 
 from aiocache import cached
 from pydantic import BaseModel
@@ -18,13 +17,7 @@ class MainService:
 
     # Инициализация класса, определение настроек redis и elastic
     def __init__(self, elastic: AsyncElasticsearch):
-
         self.elastic = elastic
-
-    # Абстрактный вызов метода в Elastic. Можно вызывать любой.
-    async def _get_from_elastic(self, es_method: Callable, **kwargs):
-        response = await es_method(**kwargs)
-        return response
 
     @cached(
         ttl=CACHE_EXPIRE_IN_SECONDS,
@@ -34,9 +27,7 @@ class MainService:
     async def get_by_uuid(self, uuid: UUID):
         result_object = {}
         try:
-            doc_ = await self._get_from_elastic(
-                self.elastic.get, index=self.index, id=str(uuid)
-            )
+            doc_ = await self.elastic.get(index=self.index, id=str(uuid))
             result_object = self.model(**doc_["_source"])
 
         except (RequestError, NotFoundError) as elastic_error:
@@ -49,27 +40,13 @@ class MainService:
         noself=True,
         **get_redis_cache_config(),
     )
-    async def _search(
-        self, body: dict, page_size: int = 50, first_field: int = 1, sort: str = ""
-    ):
-        search_options = {
-            "index": self.index,
-            "body": body,
-            "filter_path": ["hits.hits._id", "hits.hits" "._source"],
-            "size": page_size,
-            "from_": first_field,
-        }
-        if sort:
-            search_options["sort"] = sort
+    async def _search(self, index: str = None, **search_options):
+        index = index or self.index
         result_objects = []
         try:
-            response = await self._get_from_elastic(
-                self.elastic.search, **search_options
-            )
+            response = await self.elastic.search(index=index, **search_options)
             if response:
-                result_objects = [
-                    self.model(**doc["_source"]) for doc in response["hits"]["hits"]
-                ]
+                result_objects = response["hits"]["hits"]
         except (RequestError, NotFoundError) as elastic_error:
             logging.error(elastic_error)
         finally:

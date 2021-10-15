@@ -21,7 +21,7 @@ class FilmService(MainService):
         page_size: int,
         filter_genre: Optional[str] = "",
         query: str = "",
-    ) -> list[dict]:
+    ):
         body = {}
         body["query"] = {"match_all": {}}
         imdb_sorting = "desc"
@@ -46,12 +46,14 @@ class FilmService(MainService):
             }
 
         sort = f"imdb_rating:{imdb_sorting},"
-        return await self._search(
+        searched_films = await self._search(
             body=body,
             sort=sort,
-            first_field=page_number * page_size if page_number > 1 else 1,
-            page_size=page_size,
+            filter_path=["hits.hits._id", "hits.hits" "._source"],
+            from_=page_number * page_size,
+            size=page_size,
         )
+        return [self.model(**doc["_source"]) for doc in searched_films]
 
 
 @lru_cache()

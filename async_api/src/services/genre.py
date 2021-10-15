@@ -12,7 +12,8 @@ class GenreService(MainService):
     model = Genre
 
     async def genre_list(self) -> list[Genre]:
-        return await self._search({"query": {"match_all": {}}})
+        searched_genres = await self._search(query={"match_all": {}})
+        return [self.model(**doc["_source"]) for doc in searched_genres]
 
 
 @lru_cache()

@@ -3,7 +3,7 @@ from typing import Optional
 
 from models.film import Film
 from services.film import FilmService, get_film_service
-from fastapi import Query, Depends, Request, APIRouter, HTTPException
+from fastapi import Query, Depends, APIRouter, HTTPException
 
 router = APIRouter()
 
