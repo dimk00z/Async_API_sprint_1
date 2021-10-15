@@ -56,8 +56,6 @@ class MainService:
                 )
                 await self._put_to_cache(path, doc_)
                 return self.model(**doc_["_source"])
-            else:
-                return self.model(**dict(response)["_source"])
 
         except elasticsearch.NotFoundError:
             return None
