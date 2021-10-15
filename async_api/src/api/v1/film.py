@@ -1,5 +1,5 @@
 from http import HTTPStatus
-from typing import Dict, List, Optional
+from typing import Optional
 
 from models.film import Film
 from services.film import FilmService, get_film_service
@@ -7,7 +7,7 @@ from fastapi import Query, Depends, Request, APIRouter, HTTPException
 
 router = APIRouter()
 
-persons = Optional[List[Dict[str, str]]]
+persons = Optional[list[dict[str, str]]]
 
 
 async def get_films(
@@ -27,7 +27,9 @@ async def get_films(
     )
 
     if not films:
-        raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="not one film found")
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="not one film found"
+        )
     if "error" in films:
         return HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=films["error"])
     return [
@@ -47,7 +49,7 @@ async def films_list(
     sort: Optional[str] = Query(None, regex="^-?[a-zA-Z_]+$"),
     page_number: int = Query(1, alias="page[number]"),
     page_size: int = Query(50, alias="page[size]"),
-) -> List[Dict]:
+) -> list[dict]:
     return await get_films(
         film_service=film_service,
         sort=sort,
@@ -64,7 +66,7 @@ async def films_search(
     page_number_: int = Query(1, alias="page[number]"),
     page_size_: int = Query(50, alias="page[size]"),
     query_: Optional[str] = Query(None, title="Поисковая строка", alias="query"),
-) -> List[Dict]:
+) -> list[dict]:
     return await get_films(
         film_service=film_service,
         sort=sort_,
@@ -77,7 +79,6 @@ async def films_search(
 # Внедряем FilmService с помощью Depends(get_film_service)
 @router.get("/{film_uuid}", response_model=Film)
 async def film_details(
-    request: Request,
     film_uuid: str,
     film_service: FilmService = Depends(get_film_service),
 ) -> Film:

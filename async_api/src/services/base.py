@@ -34,7 +34,9 @@ class MainService:
     )
     async def get_by_uuid(self, uuid: UUID):
         try:
-            doc_ = await self._get_from_elastic(self.elastic.get, index=self.index, id=str(uuid))
+            doc_ = await self._get_from_elastic(
+                self.elastic.get, index=self.index, id=str(uuid)
+            )
             return self.model(**doc_["_source"])
 
         except (RequestError, NotFoundError):
@@ -45,7 +47,9 @@ class MainService:
         noself=True,
         **get_redis_cache_config(),
     )
-    async def _search(self, body: dict, page_size: int = 50, first_field: int = 1, sort: str = ""):
+    async def _search(
+        self, body: dict, page_size: int = 50, first_field: int = 1, sort: str = ""
+    ):
         search_options = {
             "index": self.index,
             "body": body,
@@ -56,7 +60,9 @@ class MainService:
         if sort:
             search_options["sort"] = sort
         try:
-            response = await self._get_from_elastic(self.elastic.search, **search_options)
+            response = await self._get_from_elastic(
+                self.elastic.search, **search_options
+            )
             return [self.model(**doc["_source"]) for doc in response["hits"]["hits"]]
         except (RequestError, NotFoundError):
             return []

@@ -31,7 +31,9 @@ class FilmService(MainService):
             body["query"] = {
                 "nested": {
                     "path": "genres",
-                    "query": {"bool": {"must": [{"match": {f"genres.uuid": filter_genre}}]}},
+                    "query": {
+                        "bool": {"must": [{"match": {f"genres.uuid": filter_genre}}]}
+                    },
                 }
             }
         elif query != "":

@@ -1,5 +1,4 @@
 import logging
-from typing import Tuple
 
 from pydantic import Field, BaseSettings
 from pydantic.error_wrappers import ValidationError
@@ -36,7 +35,7 @@ class RedisSettings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-def load_etl_settings() -> Tuple[PostgresSettings, ElasticSettings, RedisSettings]:
+def load_etl_settings() -> tuple[PostgresSettings, ElasticSettings, RedisSettings]:
     try:
         return (PostgresSettings(), ElasticSettings(), RedisSettings())
     except ValidationError:

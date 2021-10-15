@@ -1,5 +1,4 @@
 from uuid import UUID
-from typing import List
 
 from movies.models import FilmWork
 from django.db.models import Q, Model
@@ -13,7 +12,7 @@ from django.contrib.postgres.aggregates import ArrayAgg
 
 class MoviesApiMixin:
     model: Model = FilmWork
-    http_method_names: List[str] = ["get"]
+    http_method_names: list[str] = ["get"]
 
     def aggregate_person(self, role) -> ArrayAgg:
         return ArrayAgg(

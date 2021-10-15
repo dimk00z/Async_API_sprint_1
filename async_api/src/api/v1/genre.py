@@ -1,20 +1,18 @@
 from uuid import UUID
 from http import HTTPStatus
-from typing import Dict, List, Optional
+from typing import Optional
 
 from models.genre import Genre
-from core.utilites import get_path_from_url
+from fastapi import Depends, APIRouter, HTTPException
 from services.genre import GenreService, get_genre_service
-from fastapi import Depends, Request, APIRouter, HTTPException
 
 router = APIRouter()
 
-genres = Optional[List[Dict[str, str]]]
+genres = Optional[list[dict[str, str]]]
 
 
 @router.get("/")
 async def genre_list(
-    request: Request,
     genre_service: GenreService = Depends(get_genre_service),
 ) -> list[Genre]:
     return await genre_service.genre_list()
