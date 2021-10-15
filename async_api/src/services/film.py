@@ -50,7 +50,7 @@ class FilmService(MainService):
             body=body,
             sort=sort,
             filter_path=["hits.hits._id", "hits.hits" "._source"],
-            from_=page_number * page_size,
+            from_=page_number * page_size if page_number > 1 else 0,
             size=page_size,
         )
         return [self.model(**doc["_source"]) for doc in searched_films]
