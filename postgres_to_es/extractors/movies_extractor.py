@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import backoff
 import psycopg2
@@ -49,7 +48,7 @@ class MoviesPostgresExtractor(BaseExtractor):
         (psycopg2.Error, psycopg2.OperationalError),
         on_backoff=backoff_hdlr,
     )
-    def extract_data(self) -> List[FilmWork]:
+    def extract_data(self) -> list[FilmWork]:
         movies_id_query: str = " ".join(
             [
                 "SELECT id, updated_at",
@@ -84,7 +83,7 @@ class MoviesPostgresExtractor(BaseExtractor):
         with self.pg_conn.cursor(name="movies_id_cursor") as movies_id_cursor:
             movies_id_cursor.execute(movies_id_query)
             while data := movies_id_cursor.fetchmany(self.cursor_limit):
-                movies: List[FilmWork] = []
+                movies: list[FilmWork] = []
                 with self.pg_conn.cursor(
                     name="movies_extented_data_cursor"
                 ) as movies_extented_data_cursor:

@@ -37,7 +37,7 @@ services:
   
   movies_redis:
     container_name: movies_redis
-    image: redis:alpine
+    image: redis:6.2.6-alpine
     volumes:
       - redis_data:/data
     ports:

@@ -1,11 +1,9 @@
-from typing import List
-
 from transformers.base_transformer import BaseTransformer
 
 
 class MoviesTransformer(BaseTransformer):
-    def transform_data(self) -> List[dict]:
-        transformed_movies: List[dict] = []
+    def transform_data(self) -> list[dict]:
+        transformed_movies: list[dict] = []
 
         for film_work in self.extracted_data:
             transformed_movie = {

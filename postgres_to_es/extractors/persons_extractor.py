@@ -1,6 +1,3 @@
-import logging
-from typing import List
-
 import backoff
 import psycopg2
 from models import Person
@@ -23,7 +20,7 @@ class PersonsPostgresExtractor(BaseExtractor):
         (psycopg2.Error, psycopg2.OperationalError),
         on_backoff=backoff_hdlr,
     )
-    def extract_data(self) -> List[Person]:
+    def extract_data(self) -> list[Person]:
         persons_query: str = " ".join(
             [
                 "SELECT id as uuid, updated_at, full_name, birth_date",
@@ -35,7 +32,7 @@ class PersonsPostgresExtractor(BaseExtractor):
         with self.pg_conn.cursor(name="person_cursor") as person_cursor:
             person_cursor.execute(persons_query)
             while data := person_cursor.fetchmany(self.cursor_limit):
-                persons: List[Person] = []
+                persons: list[Person] = []
                 for person_row in data:
                     persons.append(self.fetch_person_row(row=person_row))
                 yield persons

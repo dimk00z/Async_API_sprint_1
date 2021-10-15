@@ -1,11 +1,9 @@
-from typing import List
-
 from transformers.base_transformer import BaseTransformer
 
 
 class GenresTransformer(BaseTransformer):
-    def transform_data(self) -> List[dict]:
-        transformed_genres: List[dict] = []
+    def transform_data(self) -> list[dict]:
+        transformed_genres: list[dict] = []
 
         for genre in self.extracted_data:
             transformed_genre = {

@@ -2,7 +2,6 @@ import logging
 from os import environ
 from time import sleep
 from datetime import datetime
-from typing import Dict, List
 
 import psycopg2
 import elasticsearch
@@ -50,7 +49,7 @@ def proccess_index_etl(
 
     for extracted_data in extractor.extract_data():
         transformer = Tranformer(extracted_data=extracted_data)
-        transformed_data: List[dict] = transformer.transform_data()
+        transformed_data: list[dict] = transformer.transform_data()
         loaded_rows_number = len(transformed_data)
         es_loader.bulk_index(
             transformed_data=transformed_data, last_state=last_state, index_name=index
@@ -62,7 +61,7 @@ def proccess_index_etl(
 
 
 def start_etl(pg_conn, es_loader: ESLoader, state: State):
-    states: Dict[str, str] = {
+    states: dict[str, str] = {
         "movies_updated_at": state.get_state("movies_updated_at"),
         "genres_updated_at": state.get_state("genres_updated_at"),
         "persons_updated_at": state.get_state("persons_updated_at"),

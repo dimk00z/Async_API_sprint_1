@@ -1,4 +1,3 @@
-from typing import List
 from dataclasses import dataclass
 
 import psycopg2
@@ -15,5 +14,5 @@ class BaseExtractor:
         self.last_state: str = last_state
         self.cursor_limit = cursor_limit
 
-    def extract_data(self) -> List[dataclass]:
+    def extract_data(self) -> list[dataclass]:
         pass
