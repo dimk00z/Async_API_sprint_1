@@ -38,19 +38,10 @@ class FilmService(MainService):
             }
         elif query != "":
             body["query"] = {
-                "bool": {
-                    "should": [
-                        {
-                            "multi_match": {
-                                "query": query,
-                                "operator": "or",
-                                "fields": [
-                                    "title",
-                                    "description",
-                                ],
-                            }
-                        }
-                    ]
+                "multi_match": {
+                    "query": "Judgment",
+                    "fields": ["title", "description"],
+                    "type": "best_fields",
                 }
             }
 
