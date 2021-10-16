@@ -84,8 +84,8 @@ def start_etl(pg_conn, es_loader: ESLoader, state: State):
         proccess_index_etl(
             pg_conn=pg_conn,
             es_loader=es_loader,
-            Extactor=INDEXES[index]["extactor"],
-            Tranformer=INDEXES[index]["tranformer"],
+            extactor=INDEXES[index]["extactor"],
+            tranformer=INDEXES[index]["tranformer"],
             last_state=states[f"{index}_updated_at"],
             state=state,
             index=index,
