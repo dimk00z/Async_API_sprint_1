@@ -34,13 +34,13 @@ load_dotenv()
 def proccess_index_etl(
     pg_conn,
     es_loader: ESLoader,
-    Extactor: BaseExtractor,
-    Tranformer: BaseTransformer,
+    extactor: BaseExtractor,
+    tranformer: BaseTransformer,
     last_state: str,
     state: State,
     index: str,
 ):
-    extractor: BaseExtractor = Extactor(
+    extractor: BaseExtractor = extactor(
         pg_conn=pg_conn,
         cursor_limit=int(environ.get("POSTGRES_PAGE_LIMIT")),
         last_state=last_state,
@@ -48,7 +48,7 @@ def proccess_index_etl(
     loaded_rows_number: int = 0
 
     for extracted_data in extractor.extract_data():
-        transformer = Tranformer(extracted_data=extracted_data)
+        transformer = tranformer(extracted_data=extracted_data)
         transformed_data: list[dict] = transformer.transform_data()
         loaded_rows_number = len(transformed_data)
         es_loader.bulk_index(
@@ -115,9 +115,7 @@ def main():
         create_es_indexes(elastic_settings)
         redis_adapter.flushdb(redis_db)
 
-    pg_conn: psycopg2.extensions.connection = connect_to_postges(
-        postgres_settings.dict()
-    )
+    pg_conn: psycopg2.extensions.connection = connect_to_postges(postgres_settings.dict())
     state = State(storage=RedisStorage(redis_adapter=redis_adapter, redis_db=redis_db))
     es: elasticsearch.client.Elasticsearch = connect_to_elastic(elastic_settings.host)
     es_loader = ESLoader(es, indexes=INDEXES)
