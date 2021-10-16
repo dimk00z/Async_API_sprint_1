@@ -115,7 +115,9 @@ def main():
         create_es_indexes(elastic_settings)
         redis_adapter.flushdb(redis_db)
 
-    pg_conn: psycopg2.extensions.connection = connect_to_postges(postgres_settings.dict())
+    pg_conn: psycopg2.extensions.connection = connect_to_postges(
+        postgres_settings.dict()
+    )
     state = State(storage=RedisStorage(redis_adapter=redis_adapter, redis_db=redis_db))
     es: elasticsearch.client.Elasticsearch = connect_to_elastic(elastic_settings.host)
     es_loader = ESLoader(es, indexes=INDEXES)
