@@ -26,6 +26,20 @@ from extractors import (
     PersonsPostgresExtractor,
 )
 
+INDEXES = {
+    "movies": {
+        "extactor": MoviesPostgresExtractor,
+        "tranformer": MoviesTransformer,
+    },
+    "genres": {
+        "extactor": GenresPostgresExtractor,
+        "tranformer": GenresTransformer,
+    },
+    "persons": {
+        "extactor": PersonsPostgresExtractor,
+        "tranformer": PersonTransformer,
+    },
+}
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -66,26 +80,12 @@ def start_etl(pg_conn, es_loader: ESLoader, state: State):
         "genres_updated_at": state.get_state("genres_updated_at"),
         "persons_updated_at": state.get_state("persons_updated_at"),
     }
-    indexes = {
-        "movies": {
-            "extactor": MoviesPostgresExtractor,
-            "tranformer": MoviesTransformer,
-        },
-        "genres": {
-            "extactor": GenresPostgresExtractor,
-            "tranformer": GenresTransformer,
-        },
-        "persons": {
-            "extactor": PersonsPostgresExtractor,
-            "tranformer": PersonTransformer,
-        },
-    }
-    for index in indexes:
+    for index in INDEXES:
         proccess_index_etl(
             pg_conn=pg_conn,
             es_loader=es_loader,
-            Extactor=indexes[index]["extactor"],
-            Tranformer=indexes[index]["tranformer"],
+            Extactor=INDEXES[index]["extactor"],
+            Tranformer=INDEXES[index]["tranformer"],
             last_state=states[f"{index}_updated_at"],
             state=state,
             index=index,
