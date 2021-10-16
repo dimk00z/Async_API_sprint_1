@@ -26,6 +26,20 @@ from extractors import (
     PersonsPostgresExtractor,
 )
 
+INDEXES = {
+    "movies": {
+        "extactor": MoviesPostgresExtractor,
+        "tranformer": MoviesTransformer,
+    },
+    "genres": {
+        "extactor": GenresPostgresExtractor,
+        "tranformer": GenresTransformer,
+    },
+    "persons": {
+        "extactor": PersonsPostgresExtractor,
+        "tranformer": PersonTransformer,
+    },
+}
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -34,13 +48,13 @@ load_dotenv()
 def proccess_index_etl(
     pg_conn,
     es_loader: ESLoader,
-    Extactor: BaseExtractor,
-    Tranformer: BaseTransformer,
+    extactor: BaseExtractor,
+    tranformer: BaseTransformer,
     last_state: str,
     state: State,
     index: str,
 ):
-    extractor: BaseExtractor = Extactor(
+    extractor: BaseExtractor = extactor(
         pg_conn=pg_conn,
         cursor_limit=int(environ.get("POSTGRES_PAGE_LIMIT")),
         last_state=last_state,
@@ -48,7 +62,7 @@ def proccess_index_etl(
     loaded_rows_number: int = 0
 
     for extracted_data in extractor.extract_data():
-        transformer = Tranformer(extracted_data=extracted_data)
+        transformer = tranformer(extracted_data=extracted_data)
         transformed_data: list[dict] = transformer.transform_data()
         loaded_rows_number = len(transformed_data)
         es_loader.bulk_index(
@@ -66,26 +80,12 @@ def start_etl(pg_conn, es_loader: ESLoader, state: State):
         "genres_updated_at": state.get_state("genres_updated_at"),
         "persons_updated_at": state.get_state("persons_updated_at"),
     }
-    indexes = {
-        "movies": {
-            "extactor": MoviesPostgresExtractor,
-            "tranformer": MoviesTransformer,
-        },
-        "genres": {
-            "extactor": GenresPostgresExtractor,
-            "tranformer": GenresTransformer,
-        },
-        "persons": {
-            "extactor": PersonsPostgresExtractor,
-            "tranformer": PersonTransformer,
-        },
-    }
-    for index in indexes:
+    for index in INDEXES:
         proccess_index_etl(
             pg_conn=pg_conn,
             es_loader=es_loader,
-            Extactor=indexes[index]["extactor"],
-            Tranformer=indexes[index]["tranformer"],
+            extactor=INDEXES[index]["extactor"],
+            tranformer=INDEXES[index]["tranformer"],
             last_state=states[f"{index}_updated_at"],
             state=state,
             index=index,
